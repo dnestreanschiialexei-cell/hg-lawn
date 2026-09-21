@@ -1,0 +1,82 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- кто это ----------
+    function tg() { return request.auth != null && request.auth.token.tg == true; }          // личность подтверждена сервером
+    function roles() { return ('roles' in request.auth.token) ? request.auth.token.roles : {}; }
+    function role(d) { return (d in roles()) ? roles()[d] : ''; }
+    function isDisp() { return tg() && (role('lawn') == 'disp' || role('topiary') == 'disp'); }
+    function isStaff() { return tg() && ((role('lawn') != '' && role('lawn') != 'client') || (role('topiary') != '' && role('topiary') != 'client')); }
+    function isClient() { return tg() && !isStaff() && (role('lawn') == 'client' || role('topiary') == 'client'); }
+    function myClientName() { return ('clientName' in request.auth.token) ? request.auth.token.clientName : '__none__'; }
+    function isSelf(uid) { return tg() && request.auth.token.tgId == uid; }
+
+    // ---------- компания ----------
+    // Открытая часть настроек (название, направления, адрес сервера): читает любой вошедший, меняет диспетчер
+    match /companies/{cid} {
+      allow read: if request.auth != null;
+      allow write: if isDisp();
+    }
+    // График, чек-листы, бригады — сотрудники читают, диспетчер меняет
+    match /companies/{cid}/directions/{dir} {
+      allow read: if isStaff();
+      allow write: if isDisp();
+    }
+    // Цены — только диспетчер
+    match /companies/{cid}/directions/{dir}/private/{doc} {
+      allow read, write: if isDisp();
+    }
+    // Выезды — отдельные документы; клиент видит только свои
+    match /companies/{cid}/directions/{dir}/visits/{v} {
+      allow read: if isStaff() || (isClient() && resource.data.clientName == myClientName());
+      allow write: if isStaff();
+    }
+
+    // ---------- роли ----------
+    // Сотрудник может создать только свою запись и не может назначить себя диспетчером
+    function inviteOk(col) {
+      return 'inviteToken' in request.resource.data
+        && exists(/databases/$(database)/documents/$(col)/$(request.resource.data.inviteToken))
+        && get(/databases/$(database)/documents/$(col)/$(request.resource.data.inviteToken)).data.type == 'worker'
+        && get(/databases/$(database)/documents/$(col)/$(request.resource.data.inviteToken)).data.role == request.resource.data.role
+        && !('usedBy' in get(/databases/$(database)/documents/$(col)/$(request.resource.data.inviteToken)).data);
+    }
+    match /users/{uid} {
+      allow read: if isStaff() || isSelf(uid);
+      allow create: if isDisp() || (isSelf(uid) && (request.resource.data.role != 'disp' || inviteOk('invites')));
+      allow update: if isDisp() || (isSelf(uid) && request.resource.data.role == resource.data.role);
+      allow delete: if isDisp();
+    }
+    match /topiary_users/{uid} {
+      allow read: if isStaff() || isSelf(uid);
+      allow create: if isDisp() || (isSelf(uid) && (request.resource.data.role != 'disp' || inviteOk('topiary_invites')));
+      allow update: if isDisp() || (isSelf(uid) && request.resource.data.role == resource.data.role);
+      allow delete: if isDisp();
+    }
+
+    // ---------- общие рабочие документы (переносы, срочные, заправки, заметки) ----------
+    match /state/{doc}   { allow read, write: if isStaff(); }
+    match /topiary/{doc} { allow read, write: if isStaff(); }
+
+    // ---------- старая история (до перехода на выезды) ----------
+    match /history/{h}         { allow read: if isStaff() || (isClient() && resource.data.clientName == myClientName()); allow write: if isStaff(); }
+    match /topiary_history/{h} { allow read: if isStaff() || (isClient() && resource.data.clientName == myClientName()); allow write: if isStaff(); }
+
+    // ---------- приглашения клиентов: создаёт диспетчер, читает тот, кто открыл ссылку ----------
+    // Приглашения: создаёт диспетчер; открывший может только пометить «использовано» (один раз)
+    match /invites/{t}         { allow read: if tg(); allow create, delete: if isDisp(); allow update: if isDisp() || (tg() && !('usedBy' in resource.data) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['usedBy','usedAt'])); }
+    match /topiary_invites/{t} { allow read: if tg(); allow create, delete: if isDisp(); allow update: if isDisp() || (tg() && !('usedBy' in resource.data) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['usedBy','usedAt'])); }
+
+    // ---------- сообщения и заявки ----------
+    match /client_messages/{m}  { allow create: if tg(); allow read, update: if isStaff(); }
+    match /client_requests/{m}  { allow create: if tg(); allow read, update: if isStaff(); }
+    match /topiary_messages/{m} { allow create: if tg(); allow read, update: if isStaff(); }
+    match /topiary_requests/{m} { allow create: if tg(); allow read, update: if isStaff(); }
+    match /office_messages/{m}         { allow create: if isStaff(); allow read, update: if isDisp(); }
+    match /topiary_office_messages/{m} { allow create: if isStaff(); allow read, update: if isDisp(); }
+
+    // Только сервер (бот) — приложению сюда доступа нет
+    match /voice_pending/{p} { allow read, write: if false; }
+  }
+}
