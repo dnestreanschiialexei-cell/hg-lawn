@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="theme-color" content="#0f221a" />
+<title>Hedera · Настройки компании</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{--forest:#1a3829;--forest-deep:#0f221a;--bone:#f5f1e8;--cream:#ebe5d4;--terra:#c45e3a;--rust:#9c4528;--moss:#5d7a4f;--sage:#8aa388;--amber:#c89b3d;--green:#4caf50;}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;font-family:'Manrope',system-ui,sans-serif;background:#000;color:var(--forest-deep);}
+  body{display:flex;justify-content:center;min-height:100vh;background:radial-gradient(ellipse at top,#1a3829,#0f221a 70%);}
+  .app{width:100%;max-width:520px;min-height:100vh;background:var(--bone);position:relative;display:flex;flex-direction:column;}
+  @media(min-width:600px){.app{border-radius:28px;margin:16px 0;min-height:auto;}}
+  .head{background:linear-gradient(180deg,var(--forest),var(--forest-deep));color:var(--bone);padding:18px 18px 14px;}
+  .head-row{display:flex;justify-content:space-between;align-items:center;font-size:10px;letter-spacing:0.22em;text-transform:uppercase;opacity:0.7;}
+  .logo{display:inline-flex;align-items:center;gap:6px;font-weight:700;letter-spacing:0;text-transform:none;font-size:12px;opacity:1;}
+  .logo b{background:var(--bone);color:var(--forest-deep);border-radius:6px;padding:2px 6px;font-family:'Fraunces',serif;}
+  .logo b span{color:var(--green);}
+  .head h1{font-family:'Fraunces',serif;font-weight:400;font-size:28px;letter-spacing:-0.02em;margin:12px 0 2px;line-height:1.05;}
+  .head h1 em{font-style:italic;font-weight:300;}
+  .head .sub{font-size:12px;opacity:0.65;}
+  .tabs{display:flex;gap:4px;padding:10px 12px 0;overflow-x:auto;scrollbar-width:none;background:var(--bone);position:sticky;top:0;z-index:5;border-bottom:1px solid rgba(0,0,0,0.06);}
+  .tabs::-webkit-scrollbar{display:none;}
+  .tab{flex-shrink:0;padding:9px 13px;border-radius:12px 12px 0 0;border:none;background:transparent;font-family:inherit;font-size:12px;font-weight:600;color:var(--moss);cursor:pointer;letter-spacing:0.02em;}
+  .tab.active{background:var(--cream);color:var(--forest-deep);}
+  .body{padding:14px 14px 90px;flex:1;}
+  .card{background:white;border-radius:14px;padding:14px;margin-bottom:10px;box-shadow:0 1px 0 rgba(0,0,0,0.04);}
+  .card h3{margin:0 0 10px;font-family:'Fraunces',serif;font-weight:400;font-size:18px;letter-spacing:-0.01em;}
+  .hint{font-size:11px;color:var(--moss);line-height:1.5;margin:-4px 0 10px;}
+  label.f{display:block;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:var(--moss);margin:10px 0 4px;}
+  .in,select.in,textarea.in{width:100%;padding:11px 12px;border-radius:10px;border:1px solid rgba(0,0,0,0.12);background:var(--bone);font-family:inherit;font-size:14px;color:var(--forest-deep);}
+  textarea.in{min-height:90px;resize:vertical;line-height:1.5;}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:12px 16px;border-radius:12px;border:none;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;}
+  .btn.p{background:var(--forest);color:var(--bone);}
+  .btn.s{background:var(--cream);color:var(--forest-deep);}
+  .btn.d{background:transparent;color:var(--rust);border:1px solid rgba(156,69,40,0.35);}
+  .btn.w{width:100%;}
+  .btn:active{transform:scale(0.98);}
+  .btn:disabled{opacity:0.4;pointer-events:none;}
+  .list-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid rgba(0,0,0,0.06);cursor:pointer;}
+  .list-item:last-child{border-bottom:none;}
+  .li-main{flex:1;min-width:0;}
+  .li-name{font-size:14px;font-weight:600;}
+  .li-sub{font-size:11px;color:var(--moss);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .li-price{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--forest);}
+  .pill{font-size:9px;letter-spacing:0.12em;text-transform:uppercase;padding:3px 7px;border-radius:6px;background:var(--cream);color:var(--moss);font-weight:700;}
+  .pill.on{background:var(--forest);color:var(--bone);}
+  .group-h{font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:var(--moss);margin:14px 0 4px;display:flex;justify-content:space-between;}
+  .savebar{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:center;padding:10px 14px calc(10px + env(safe-area-inset-bottom));background:linear-gradient(180deg,rgba(245,241,232,0),var(--bone) 40%);z-index:6;}
+  .savebar .inner{width:100%;max-width:492px;display:flex;gap:8px;}
+  .savebar .btn{flex:1;}
+  .dirty{background:var(--terra) !important;}
+  .modal-bg{position:fixed;inset:0;background:rgba(15,34,26,0.55);display:flex;align-items:flex-end;justify-content:center;z-index:50;}
+  .modal{width:100%;max-width:520px;background:var(--bone);border-radius:22px 22px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));max-height:88vh;overflow-y:auto;}
+  .modal h2{font-family:'Fraunces',serif;font-weight:400;font-size:22px;margin:0 0 4px;letter-spacing:-0.02em;}
+  .modal .actions{display:flex;gap:8px;margin-top:16px;}
+  .modal .actions .btn{flex:1;}
+  .toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:var(--forest-deep);color:var(--bone);padding:10px 16px;border-radius:12px;font-size:13px;z-index:99;box-shadow:0 8px 30px rgba(0,0,0,0.25);}
+  .cond{display:flex;gap:6px;align-items:center;margin-top:6px;}
+  .cond select{flex:0 0 120px;}
+  .cond input{flex:1;}
+  .cond button{flex:0 0 36px;}
+  .gate{padding:40px 24px;text-align:center;color:var(--forest-deep);}
+  .gate h2{font-family:'Fraunces',serif;font-weight:400;}
+  .kv{display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-bottom:1px dashed rgba(0,0,0,0.08);}
+  .switch{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(0,0,0,0.06);}
+  .switch input{width:22px;height:22px;accent-color:var(--forest);}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="head">
+    <div class="head-row"><span class="logo"><b>H<span>G</span></b> Hedera Garden</span><span id="who">—</span></div>
+    <h1>Настройки <em>компании</em></h1>
+    <div class="sub">Клиенты, цены, бригады, чек-листы — всё меняется здесь, без правки кода.</div>
+  </div>
+  <div class="tabs" id="tabs"></div>
+  <div class="body" id="body"><div class="gate"><h2>Проверяю доступ…</h2></div></div>
+  <div class="savebar" id="savebar" style="display:none;"><div class="inner">
+    <button class="btn s" onclick="reloadAll()">Отменить изменения</button>
+    <button class="btn p" id="save-btn" onclick="saveAll()">Сохранить</button>
+  </div></div>
+</div>
+<div id="modal-root"></div>
+<script>
+firebase.initializeApp({
+  apiKey: "AIzaSyB_QTUIaj5HXQoWv1zpk0qHaVSAJ_dq6eg",
+  authDomain: "hedera-lawn.firebaseapp.com",
+  projectId: "hedera-lawn",
+  storageBucket: "hedera-lawn.firebasestorage.app",
+  messagingSenderId: "399606815748",
+  appId: "1:399606815748:web:ead663fe3dbc5212c0e951"
+});
+const db = firebase.firestore();
+const COMPANY_ID = 'hedera';
+const DAYS = ['Пн','Вт','Ср','Чт','Пт','Сб'];
+const COND_TYPES = { time:'⏰ время', warn:'⚠ внимание', access:'🔑 доступ', contact:'📞 связь', extra:'➕ доп. работа', freq:'↻ раз в 2 недели' };
+const CURRENCIES = [ ['MDL','лей','Молдавский лей'], ['EUR','€','Евро'], ['USD','$','Доллар США'], ['RON','lei','Румынский лей'], ['UAH','₴','Гривна'], ['GBP','£','Фунт'], ['PLN','zł','Злотый'] ];
+const DIR_META = { lawn:{name:'Газон',icon:'🌿',unit:'m2'}, topiary:{name:'Топиар',icon:'✂️',unit:'people'}, care:{name:'Уход',icon:'🌳',unit:'people'}, build:{name:'Создание',icon:'🏗',unit:'project'} };
+
+// ---------- ГОТОВЫЕ ДАННЫЕ HEDERA (для кнопки «загрузить») ----------
+const SEED = {
+  company: { name:'Hedera Garden', currency:{code:'MDL',symbol:'лей'}, defaultLang:'ru', langs:['ru','ro','en'],
+    directions:{ lawn:{name:'Газон',active:true}, topiary:{name:'Топиар',active:true}, care:{name:'Уход',active:false}, build:{name:'Создание',active:false} } },
+  lawn: { schedule: {
+  'Пн-1': { label:'Пн-1', total_m2:908, total_time:4.8, clients:[
+    {n:1,name:'Нелли (Птичка)',sector:'Телецентр',address:'ул. М. Чакир 7',m2:210,time_h:0.7,conditions:[{type:'time',text:'Начинать с неё. Быть около 9:00'}]},
+    {n:2,name:'Валентин Политов',sector:'Телецентр',address:'ул. Пирогова 12',m2:100,time_h:0.7,conditions:[{type:'time',text:'ДО 13:00'},{type:'extra',text:'Подметать хвою с плитки, наводить порядок во дворе'}]},
+    {n:3,name:'Георгий',sector:'Телецентр',address:'ул. Пирогова 26',m2:150,time_h:1.0,conditions:[{type:'time',text:'Быть ДО 13:00'}]},
+    {n:4,name:'Лиля Андроник',sector:'Телецентр',address:'ул. Нукарилор 25',m2:165,time_h:1.0,conditions:[]},
+    {n:5,name:'Петр Кобан',sector:'Малая Малина',address:'ул. Нукарилор 23',m2:153,time_h:0.7,conditions:[{type:'warn',text:'ОБЯЗАТЕЛЬНО РАБОТАТЬ СО ЩИТОМ'},{type:'warn',text:'По плитам газонокосилку НЕ ВОЗИТЬ'},{type:'warn',text:'ВНИМАТЕЛЬНО — чтобы трава не попала в бассейн'}]},
+    {n:6,name:'Корина Зара',sector:'Малая Малина',address:'ул. Археолог Ион Касьян-Суручану 7/2',m2:130,time_h:0.7,conditions:[{type:'extra',text:'Убирать сорняки из клумб с камнем'}]},
+  ]},
+  'Пн-2': { label:'Пн-2', total_m2:845, total_time:3.7, clients:[
+    {n:1,name:'Александр Киловатый',sector:'Телецентр',address:'ул. Тимиш 35',m2:50,time_h:0.5,conditions:[{type:'time',text:'ПОСЛЕ 10:00'}]},
+    {n:2,name:'Теннисный корт',sector:'Телецентр',address:'ул. Н. Смокина 29',m2:700,time_h:2.5,conditions:[{type:'extra',text:'REGATA EVENT SRL'}]},
+    {n:3,name:'Маргарита Мельничук',sector:'Телецентр',address:'ул. Чокэрлией 21/6',m2:95,time_h:0.7,conditions:[]},
+  ]},
+  'Вт-1': { label:'Вт-1', total_m2:1175, total_time:6.0, clients:[
+    {n:1,name:'Институт Юстиции',sector:'Центр',address:'ул. Сергей Лазо 1',m2:650,time_h:2.5,conditions:[{type:'extra',text:'Вырывать сорняки ОБЯЗАТЕЛЬНО со всех клумб'}]},
+    {n:2,name:'Николай GavrisPrim',sector:'Малая Малина',address:'ул. Фратий Апостол 10',m2:345,time_h:2.5,conditions:[{type:'extra',text:'Убираем круглый год в независимости от погоды'},{type:'access',text:'КЛЮЧ В ОФИСЕ'}]},
+    {n:3,name:'Иван Скиносы',sector:'Кодру',address:'1-й переулок Колиней, №29А',m2:180,time_h:1.0,conditions:[]},
+  ]},
+  'Вт-2': { label:'Вт-2', total_m2:849, total_time:6.1, clients:[
+    {n:1,name:'Юрий Нисторика',sector:'Думбрава',address:'ул. Игорь Виеру 36/В',m2:120,time_h:1.0,conditions:[]},
+    {n:2,name:'Алексей Флорян',sector:'Думбрава',address:'ул. Игорь Виеру 7',m2:81,time_h:1.0,conditions:[{type:'extra',text:'Проверять сорняки на плитах'}]},
+    {n:3,name:'Иван Валуца',sector:'Думбрава',address:'ул. Фынтынилор 59',m2:176,time_h:1.3,conditions:[]},
+    {n:4,name:'Иван Дурлешты',sector:'Дурлешты',address:'ул. Стежарулуй 57',m2:245,time_h:1.5,conditions:[{type:'access',text:'КЛЮЧ В ОФИСЕ'}]},
+    {n:5,name:'Валентина Мыня',sector:'Буюканы',address:'ул. Карачобану 6',m2:54,time_h:0.5,conditions:[{type:'contact',text:'Звонить за 30-60 мин до приезда: 069128028'}]},
+    {n:6,name:'Сергей Артемьев',sector:'Буюканы',address:'ул. Мария Тэнесе 14',m2:173,time_h:1.3,conditions:[]},
+  ]},
+  'Ср-1': { label:'Ср-1', total_m2:1000, total_time:4.6, clients:[
+    {n:1,name:'Алла Мырза',sector:'Пояна Домняскэ',address:'ул. Тинеретулуй 6, дом № 8',m2:130,time_h:0.7,conditions:[{type:'freq',text:'РАЗ В 2 НЕДЕЛИ'},{type:'extra',text:'Аккуратно'}]},
+    {n:2,name:'Теодор / Диана',sector:'Пояна Домняскэ',address:'3-й переулок ул. Тинеретулуй № 2',m2:400,time_h:1.7,conditions:[]},
+    {n:3,name:'Сергей Фазлы',sector:'Пояна Домняскэ',address:'ул. Тинеретулуй 9, дом № 118',m2:90,time_h:0.7,conditions:[{type:'access',text:'КЛЮЧ В ОФИСЕ — офис открывает'}]},
+    {n:4,name:'Сорелия',sector:'Трушены',address:'ул. Спикулуй №10',m2:380,time_h:1.5,conditions:[{type:'warn',text:'Использовать щит возле стеклянных поверхностей в зоне барбекю'},{type:'extra',text:'Протирать стекло, если запачкали травой'}]},
+  ]},
+  'Чт-1': { label:'Чт-1', total_m2:1044, total_time:6.6, clients:[
+    {n:1,name:'Анастасия',sector:'Чеканы',address:'ул. Чикаго 21',m2:50,time_h:0.5,conditions:[]},
+    {n:2,name:'Виктор',sector:'Чеканы',address:'ул. Студенческая 27',m2:220,time_h:1.0,conditions:[]},
+    {n:3,name:'Илья Невский',sector:'Чеканы',address:'ул. Студенческая 25А',m2:136,time_h:0.7,conditions:[{type:'contact',text:'Звонить жене Алене'}]},
+    {n:4,name:'Наташа / Рома',sector:'Чеканы',address:'ул. Анна Барбу 23',m2:50,time_h:1.5,conditions:[{type:'extra',text:'Между ёлок стричь через неделю, ножницами'}]},
+    {n:5,name:'Алвиан',sector:'Чеканы',address:'ул. Корлэтяну 48',m2:160,time_h:0.7,conditions:[{type:'contact',text:'Предупреждать за 20-30 мин (телефон или Viber)'}]},
+    {n:6,name:'Ольга',sector:'Ставчены',address:'ул. Барбу Лэутару 6/2',m2:180,time_h:0.7,conditions:[{type:'extra',text:'Убирать сорняки с горки, одуванчики вырывать «отвёрткой»'}]},
+    {n:7,name:'Денис',sector:'Криково',address:'ул. Фрунзе 6',m2:143,time_h:0.8,conditions:[{type:'time',text:'В ЛЮБОЕ ВРЕМЯ'},{type:'extra',text:'+ Полив запустить'}]},
+    {n:8,name:'Зинаида',sector:'Криково',address:'ул. Алба Юлия 4',m2:105,time_h:0.7,conditions:[{type:'warn',text:'Использовать щит ВСЕГДА'},{type:'warn',text:'АККУРАТНО — белая плитка на участке'}]},
+  ]},
+  'Чт-2': { label:'Чт-2', total_m2:2200, total_time:8.0, clients:[
+    {n:1,name:'Щербинский Игорь',sector:'Кожушна',address:'с. Кожушна',m2:2200,time_h:8.0,conditions:[{type:'extra',text:'Мыть фильтр раз в неделю'}]},
+  ]},
+  'Пт-1': { label:'Пт-1', total_m2:743, total_time:6.7, clients:[
+    {n:1,name:'Toro Centre',sector:'Кишинев',address:'ул. Пан Халиппа 6',m2:155,time_h:3.0,conditions:[{type:'extra',text:'Проверять, убирать сорняки с клумб на террасе'},{type:'contact',text:'Сдавать работу Татьяне Администратору: 069641211'}]},
+    {n:2,name:'Полина Цветаева',sector:'Тогатино',address:'Сфынта Винеря 38',m2:23,time_h:0.5,conditions:[]},
+    {n:3,name:'Михаил Костров',sector:'Колоница',address:'ул. Мирча чел Бэтрын 27',m2:265,time_h:1.5,conditions:[{type:'warn',text:'По периметру плитки стричь НЕ ТРИММЕРОМ — ножницами для овечек'},{type:'warn',text:'Горки НЕ ТРОГАЕМ'}]},
+    {n:4,name:'Коля (Суши)',sector:'Балабанешты',address:'Балабанешты',m2:150,time_h:0.7,conditions:[]},
+    {n:5,name:'Кэлин Виеру',sector:'Балабанешты',address:'Балабанешты',m2:150,time_h:1.0,conditions:[{type:'contact',text:'Звонить с утра соседке Наталье, предупредить когда ожидать: 060805234'},{type:'extra',text:'Во дворе убирать плитку вокруг дома, проверять сорняки'},{type:'warn',text:'ОБЯЗАТЕЛЬНО убрать мусор'}]},
+  ]},
+  'Пт-2': { label:'Пт-2', total_m2:952, total_time:6.2, clients:[
+    {n:1,name:'Николай GavrisPrim',sector:'Малая Малина',address:'ул. Фратий Апостол 10',m2:345,time_h:1.0,conditions:[{type:'extra',text:'Плитка + уборка'},{type:'access',text:'КЛЮЧ В ОФИСЕ'}]},
+    {n:2,name:'Кристина',sector:'Ботаника',address:'ул. Четатя Албэ 11/1',m2:110,time_h:1.0,conditions:[]},
+    {n:3,name:'Отель Ibis',sector:'Ботаника',address:'Satul German, ул. Дачия 1',m2:772,time_h:3.5,conditions:[{type:'time',text:'ДО 17:00'},{type:'warn',text:'Приезжать с распечатанным актом запланированных работ'},{type:'extra',text:'Сдавать работу Администраторам по акту'}]},
+    {n:4,name:'Олеся',sector:'Сынжера',address:'ул. Ренаштерий 7',m2:70,time_h:0.7,conditions:[]},
+  ]},
+  'Сб-1': { label:'Сб-1', total_m2:1096, total_time:4.5, clients:[
+    {n:1,name:'СВС Центр',sector:'Центр',address:'ул. Черника 3 (заднюю и переднюю площадку)',m2:816,time_h:3.5,conditions:[]},
+    {n:2,name:'Кафе Mojito',sector:'Центр',address:'ул. Штефан чел Маре 152',m2:280,time_h:1.0,conditions:[{type:'freq',text:'1 РАЗ В 2 НЕДЕЛИ'},{type:'time',text:'В 8:00'}]},
+  ]},
+}, prices: {
+  // Пн-1
+  'Пн-1_1':450,'Пн-1_2':500,'Пн-1_3':650,'Пн-1_4':580,'Пн-1_5':550,'Пн-1_6':430,
+  // Пн-2
+  'Пн-2_1':400,'Пн-2_2':1200,'Пн-2_3':450,
+  // Вт-1
+  'Вт-1_1':1260,'Вт-1_2':1190,'Вт-1_3':580,
+  // Вт-2
+  'Вт-2_1':470,'Вт-2_2':500,'Вт-2_3':600,'Вт-2_4':700,'Вт-2_5':400,'Вт-2_6':480,
+  // Ср-1
+  'Ср-1_1':520,'Ср-1_2':1100,'Ср-1_3':460,'Ср-1_4':740,
+  // Чт-1
+  'Чт-1_1':400,'Чт-1_2':620,'Чт-1_3':480,'Чт-1_4':650,'Чт-1_5':550,'Чт-1_6':500,'Чт-1_7':620,'Чт-1_8':650,
+  // Чт-2
+  'Чт-2_1':3850,
+  // Пт-1
+  'Пт-1_1':900,'Пт-1_2':400,'Пт-1_3':700,'Пт-1_4':500,'Пт-1_5':822,
+  // Пт-2
+  'Пт-2_1':1100,'Пт-2_2':500,'Пт-2_3':1450,'Пт-2_4':358,
+  // Сб-1
+  'Сб-1_1':1750,'Сб-1_2':600,
+}, tasks: ['Укос газона','Тримминг краёв и углов','Сдув с дорожек и плитки','Сбор мусора и мешки в машину'], extraServices: {
+  scarif:  { id:'scarif',  label:'Скарификация',         short:'Скариф.',    icon:'🌱', color:'#5d7a4f', unitLabel:'',              pricePer100m2: 250 },
+  fert:    { id:'fert',    label:'Подкормка',            short:'Подкормка',  icon:'💊', color:'#3d6b85', unitLabel:'кг удобрения',  pricePer100m2: 180 },
+  treat:   { id:'treat',   label:'Обработка от грибка/насекомых', short:'Обработка', icon:'🛡', color:'#9c4528', unitLabel:'л препарата', pricePer100m2: 220 },
+  karcher: { id:'karcher', label:'Мытьё двора Кёрхером', short:'Кёрхер',     icon:'🧼', color:'#3d6b85', unitLabel:'',              pricePer100m2: 200 },
+  cleanup: { id:'cleanup', label:'Уборка двора (плитка)', short:'Уборка',    icon:'🧹', color:'#8aa388', unitLabel:'',              pricePer100m2: 120 },
+}, skipReasons: [
+  { id:'no_client',  label:'Клиента нет дома' },
+  { id:'no_access',  label:'Нет доступа на участок' },
+  { id:'not_needed', label:'Клиент сказал не нужно' },
+  { id:'rain',       label:'Дождь / погода' },
+  { id:'broken',     label:'Поломка оборудования' },
+  { id:'other',      label:'Другое (написать)' },
+], brigades: {
+  '1': { driver: 'Сергей Доров', helper: 'Иван Петров', helperUntil: null },
+  '2': { driver: 'Андрей Касьян', helper: 'Михаил Гросу', helperUntil: null },
+}, unit:'m2' },
+  topiary: { schedule: {
+  'Пн-1': { label:'Пн-1', clients:[] },
+  'Вт-1': { label:'Вт-1', clients:[] },
+  'Ср-1': { label:'Ср-1', clients:[] },
+  'Чт-1': { label:'Чт-1', clients:[] },
+  'Пт-1': { label:'Пт-1', clients:[] },
+  'Сб-1': { label:'Сб-1', clients:[] },
+}, prices: {}, clients: [
+  {name:'Нелли (Птичка)', sector:'Телецентр', address:'ул. М. Чакир 7'},
+  {name:'Валентин Политов', sector:'Телецентр', address:'ул. Пирогова 12'},
+  {name:'Георгий', sector:'Телецентр', address:'ул. Пирогова 26'},
+  {name:'Лиля Андроник', sector:'Телецентр', address:'ул. Нукарилор 25'},
+  {name:'Петр Кобан', sector:'Малая Малина', address:'ул. Нукарилор 23'},
+  {name:'Корина Зара', sector:'Малая Малина', address:'ул. Археолог Ион Касьян-Суручану 7/2'},
+  {name:'Александр Киловатый', sector:'Телецентр', address:'ул. Тимиш 35'},
+  {name:'Теннисный корт', sector:'Телецентр', address:'ул. Н. Смокина 29'},
+  {name:'Маргарита Мельничук', sector:'Телецентр', address:'ул. Чокэрлией 21/6'},
+  {name:'Институт Юстиции', sector:'Центр', address:'ул. Сергей Лазо 1'},
+  {name:'Николай GavrisPrim', sector:'Малая Малина', address:'ул. Фратий Апостол 10'},
+  {name:'Иван Скиносы', sector:'Кодру', address:'1-й переулок Колиней, №29А'},
+  {name:'Юрий Нисторика', sector:'Думбрава', address:'ул. Игорь Виеру 36/В'},
+  {name:'Алексей Флорян', sector:'Думбрава', address:'ул. Игорь Виеру 7'},
+  {name:'Иван Валуца', sector:'Думбрава', address:'ул. Фынтынилор 59'},
+  {name:'Иван Дурлешты', sector:'Дурлешты', address:'ул. Стежарулуй 57'},
+  {name:'Валентина Мыня', sector:'Буюканы', address:'ул. Карачобану 6'},
+  {name:'Сергей Артемьев', sector:'Буюканы', address:'ул. Мария Тэнесе 14'},
+  {name:'Алла Мырза', sector:'Пояна Домняскэ', address:'ул. Тинеретулуй 6, дом № 8'},
+  {name:'Теодор / Диана', sector:'Пояна Домняскэ', address:'3-й переулок ул. Тинеретулуй № 2'},
+  {name:'Сергей Фазлы', sector:'Пояна Домняскэ', address:'ул. Тинеретулуй 9, дом № 118'},
+  {name:'Сорелия', sector:'Трушены', address:'ул. Спикулуй №10'},
+  {name:'Анастасия', sector:'Чеканы', address:'ул. Чикаго 21'},
+  {name:'Виктор', sector:'Чеканы', address:'ул. Студенческая 27'},
+  {name:'Илья Невский', sector:'Чеканы', address:'ул. Студенческая 25А'},
+  {name:'Наташа / Рома', sector:'Чеканы', address:'ул. Анна Барбу 23'},
+  {name:'Алвиан', sector:'Чеканы', address:'ул. Корлэтяну 48'},
+  {name:'Ольга', sector:'Ставчены', address:'ул. Барбу Лэутару 6/2'},
+  {name:'Денис', sector:'Криково', address:'ул. Фрунзе 6'},
+  {name:'Зинаида', sector:'Криково', address:'ул. Алба Юлия 4'},
+  {name:'Щербинский Игорь', sector:'Кожушна', address:'с. Кожушна'},
+  {name:'Toro Centre', sector:'Кишинев', address:'ул. Пан Халиппа 6'},
+  {name:'Полина Цветаева', sector:'Тогатино', address:'Сфынта Винеря 38'},
+  {name:'Михаил Костров', sector:'Колоница', address:'ул. Мирча чел Бэтрын 27'},
+  {name:'Коля (Суши)', sector:'Балабанешты', address:'Балабанешты'},
+  {name:'Кэлин Виеру', sector:'Балабанешты', address:'Балабанешты'},
+  {name:'Кристина', sector:'Ботаника', address:'ул. Четатя Албэ 11/1'},
+  {name:'Отель Ibis', sector:'Ботаника', address:'Satul German, ул. Дачия 1'},
+  {name:'Олеся', sector:'Сынжера', address:'ул. Ренаштерий 7'},
+  {name:'СВС Центр', sector:'Центр', address:'ул. Черника 3'},
+  {name:'Кафе Mojito', sector:'Центр', address:'ул. Штефан чел Маре 152'},
+], tasks: ['Стрижка/формовка','Уборка срезанного','Сдув территории','Вывоз мусора'], extraServices: {
+  shape:   { id:'shape',   label:'Фигурная стрижка',     short:'Фигура',   icon:'✂️', color:'#c45e3a', unitLabel:'',              pricePer100m2: 0 },
+  form:    { id:'form',    label:'Формовка кустов',      short:'Формовка', icon:'🌳', color:'#5d7a4f', unitLabel:'',              pricePer100m2: 0 },
+  treat:   { id:'treat',   label:'Обработка от вредителей', short:'Обработка', icon:'🛡', color:'#9c4528', unitLabel:'л препарата', pricePer100m2: 0 },
+  fert:    { id:'fert',    label:'Подкормка',            short:'Подкормка',icon:'💊', color:'#3d6b85', unitLabel:'кг удобрения',  pricePer100m2: 0 },
+  cleanup: { id:'cleanup', label:'Уборка территории',    short:'Уборка',   icon:'🧹', color:'#8aa388', unitLabel:'',              pricePer100m2: 0 },
+}, skipReasons: [
+  { id:'no_client',  label:'Клиента нет дома' },
+  { id:'no_access',  label:'Нет доступа на участок' },
+  { id:'not_needed', label:'Клиент сказал не нужно' },
+  { id:'rain',       label:'Дождь / погода' },
+  { id:'broken',     label:'Поломка оборудования' },
+  { id:'other',      label:'Другое (написать)' },
+], brigades: {
+  '1': { driver: 'Сергей Доров', helper: 'Иван Петров', helperUntil: null },
+  '2': { driver: 'Андрей Касьян', helper: 'Михаил Гросу', helperUntil: null },
+}, unit:'people' },
+};
+
+let tgUser = null;
+try { if (window.Telegram && Telegram.WebApp) { Telegram.WebApp.ready(); Telegram.WebApp.expand(); const u = Telegram.WebApp.initDataUnsafe?.user; if (u && u.id) tgUser = { id:String(u.id), name:((u.first_name||'')+' '+(u.last_name||'')).trim() }; } } catch(e) {}
+
+let company = null;       // companies/hedera
+let dirs = {};            // {lawn: {...}, topiary: {...}}
+let curDir = 'lawn';
+let tab = 'company';
+let dirty = false;
+let _toastT = null;
+function toast(m){ let t=document.querySelector('.toast'); if(!t){t=document.createElement('div');t.className='toast';document.body.appendChild(t);} t.textContent=m; clearTimeout(_toastT); _toastT=setTimeout(()=>t.remove(),2200); }
+function markDirty(){ dirty = true; const b=document.getElementById('save-btn'); if(b){ b.classList.add('dirty'); b.textContent='Сохранить изменения'; } }
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+function clone(o){ return JSON.parse(JSON.stringify(o)); }
+
+// ---------- ДОСТУП: только диспетчер ----------
+async function gate() {
+  try { if (!firebase.auth().currentUser) await firebase.auth().signInAnonymously(); } catch(e) {}
+  if (!tgUser) { document.getElementById('body').innerHTML = '<div class="gate"><h2>Открой через Telegram</h2><p>Настройки доступны только диспетчеру, вход через бота @HgLawn_bot.</p></div>'; return false; }
+  document.getElementById('who').textContent = tgUser.name || tgUser.id;
+  // Подтверждённый вход: сервер проверяет подпись Telegram и выдаёт токен с ролями
+  let claims = null;
+  try {
+    const cs = await db.doc('companies/'+COMPANY_ID).get();
+    const authUrl = cs.exists ? (cs.data().authUrl || '') : '';
+    const initData = (window.Telegram && Telegram.WebApp && Telegram.WebApp.initData) || '';
+    if (authUrl && initData) {
+      const r = await fetch(authUrl.replace(/\/$/, '') + '/auth', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ initData }) });
+      if (r.ok) { const j = await r.json(); await firebase.auth().signInWithCustomToken(j.token); claims = j.claims; }
+    }
+  } catch(e) { console.warn('auth', e); }
+  let ok = false;
+  if (claims && claims.roles) ok = Object.values(claims.roles).includes('disp');
+  else {
+    // сервер ещё не настроен — проверяем роль напрямую (работает только пока правила открыты)
+    for (const col of ['users','topiary_users']) { try { const d = await db.collection(col).doc(tgUser.id).get(); if (d.exists && d.data().role === 'disp') ok = true; } catch(e) {} }
+  }
+  if (!ok) { document.getElementById('body').innerHTML = '<div class="gate"><h2>Нет доступа</h2><p>Твой Telegram-аккаунт не отмечен как диспетчер. Попроси диспетчера назначить роль в приложении.</p></div>'; return false; }
+  return true;
+}
+
+// ---------- ЗАГРУЗКА / СОХРАНЕНИЕ ----------
+async function reloadAll() {
+  const cs = await db.doc('companies/'+COMPANY_ID).get();
+  company = cs.exists ? cs.data() : null;
+  dirs = {};
+  const ds = await db.collection('companies/'+COMPANY_ID+'/directions').get();
+  ds.forEach(d => dirs[d.id] = d.data());
+  for (const id of Object.keys(dirs)) {
+    try { const ps = await db.doc('companies/'+COMPANY_ID+'/directions/'+id+'/private/prices').get(); if (ps.exists) dirs[id].prices = ps.data().prices || {}; } catch(e) {}
+  }
+  dirty = false;
+  const b=document.getElementById('save-btn'); if(b){ b.classList.remove('dirty'); b.textContent='Сохранить'; }
+  render();
+}
+async function saveAll() {
+  if (!company) { toast('Сначала загрузи данные Hedera или создай компанию'); return; }
+  const btn = document.getElementById('save-btn'); btn.disabled = true; btn.textContent = 'Сохраняю…';
+  try {
+    const batch = db.batch();
+    batch.set(db.doc('companies/'+COMPANY_ID), Object.assign({}, company, { updatedAt: firebase.firestore.FieldValue.serverTimestamp(), updatedBy: tgUser ? tgUser.id : null }));
+    Object.entries(dirs).forEach(([id, d]) => {
+      recomputeTotals(d);
+      const pub = Object.assign({}, d, { updatedAt: firebase.firestore.FieldValue.serverTimestamp() }); delete pub.prices;
+      batch.set(db.doc('companies/'+COMPANY_ID+'/directions/'+id), pub);
+      batch.set(db.doc('companies/'+COMPANY_ID+'/directions/'+id+'/private/prices'), { prices: d.prices || {}, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    });
+    await batch.commit();
+    dirty = false; btn.classList.remove('dirty'); btn.textContent = 'Сохранить';
+    toast('✓ Сохранено — приложения бригад подхватят при следующем открытии');
+  } catch(e) { console.error(e); toast('Ошибка сохранения: ' + (e.code || e.message)); }
+  btn.disabled = false;
+}
+function recomputeTotals(d) {
+  Object.values(d.schedule || {}).forEach(slot => {
+    slot.total_m2 = (slot.clients||[]).reduce((s,c)=>s+(+c.m2||0),0);
+    slot.total_time = +((slot.clients||[]).reduce((s,c)=>s+(+c.time_h||0),0)).toFixed(1);
+  });
+}
+function seedHedera() {
+  if (company && !confirm('Заменить текущие настройки данными Hedera Garden (41 клиент, 2 машины)? Несохранённые правки пропадут.')) return;
+  company = clone(SEED.company);
+  dirs = { lawn: clone(SEED.lawn), topiary: clone(SEED.topiary) };
+  markDirty(); render(); toast('Данные Hedera загружены — нажми «Сохранить»');
+}
+function newCompany() {
+  company = { name:'Моя компания', currency:{code:'MDL',symbol:'лей'}, defaultLang:'ru', langs:['ru','ro','en'], directions:{ lawn:{name:'Газон',active:true}, topiary:{name:'Топиар',active:false}, care:{name:'Уход',active:false}, build:{name:'Создание',active:false} } };
+  dirs = { lawn: { schedule:{}, prices:{}, tasks:['Задача 1','Задача 2'], extraServices:{}, skipReasons: clone(SEED.lawn.skipReasons), brigades:{ '1':{driver:'',helper:'',helperUntil:null} }, unit:'m2' } };
+  markDirty(); render();
+}
+
+// ---------- РЕНДЕР ----------
+const TABS = [ ['company','Компания'], ['clients','Клиенты'], ['crews','Бригады'], ['tasks','Чек-лист'], ['extras','Доп. услуги'], ['skips','Причины пропуска'] ];
+function render() {
+  document.getElementById('savebar').style.display = company ? 'flex' : 'none';
+  document.getElementById('tabs').innerHTML = TABS.map(([id,l]) => `<button class="tab ${tab===id?'active':''}" onclick="tab='${id}';render()">${l}</button>`).join('');
+  const body = document.getElementById('body');
+  if (!company) {
+    body.innerHTML = `<div class="card"><h3>Компания ещё не настроена</h3>
+      <div class="hint">Данные пока берутся из кода приложений. Нажми кнопку — и все 41 клиент, цены, бригады и чек-листы переедут в базу. После этого править их можно здесь.</div>
+      <button class="btn p w" onclick="seedHedera()">Загрузить данные Hedera Garden</button>
+      <div style="height:8px"></div>
+      <button class="btn s w" onclick="newCompany()">Начать с пустой компании</button></div>`;
+    return;
+  }
+  const dirSel = (tab === 'company') ? '' : `<div class="card" style="padding:10px 14px;display:flex;gap:6px;overflow-x:auto;">${Object.entries(company.directions||{}).filter(([,v])=>v.active).map(([id,v]) => `<button class="btn ${curDir===id?'p':'s'}" onclick="curDir='${id}';ensureDir('${id}');render()">${DIR_META[id]?DIR_META[id].icon:'•'} ${esc(v.name)}</button>`).join('')}</div>`;
+  ensureDir(curDir);
+  const fn = { company: renderCompany, clients: renderClients, crews: renderCrews, tasks: renderTasks, extras: renderExtras, skips: renderSkips }[tab];
+  body.innerHTML = dirSel + fn();
+}
+function ensureDir(id) {
+  if (!company.directions[id] || !company.directions[id].active) { const first = Object.entries(company.directions).find(([,v])=>v.active); if (first) curDir = first[0]; id = curDir; }
+  if (!dirs[id]) dirs[id] = { schedule:{}, prices:{}, tasks:[], extraServices:{}, skipReasons: clone(SEED.lawn.skipReasons), brigades:{ '1':{driver:'',helper:'',helperUntil:null} }, unit:(DIR_META[id]||{}).unit||'m2' };
+}
+function renderCompany() {
+  const c = company;
+  return `<div class="card"><h3>Компания</h3>
+    <label class="f">Название</label><input class="in" value="${esc(c.name)}" onchange="company.name=this.value;markDirty()" />
+    <div class="row">
+      <div><label class="f">Валюта</label><select class="in" onchange="const [code,sym]=this.value.split('|');company.currency={code,symbol:sym};markDirty()">
+        ${CURRENCIES.map(([code,sym,nm]) => `<option value="${code}|${sym}" ${c.currency&&c.currency.code===code?'selected':''}>${sym} · ${nm}</option>`).join('')}</select></div>
+      <div><label class="f">Язык по умолчанию</label><select class="in" onchange="company.defaultLang=this.value;markDirty()">
+        ${[['ru','Русский'],['ro','Română'],['en','English']].map(([k,v])=>`<option value="${k}" ${c.defaultLang===k?'selected':''}>${v}</option>`).join('')}</select></div>
+    </div>
+    <div class="hint" style="margin-top:8px">Бригадир может выбрать свой язык в профиле; здесь — язык для новых пользователей.</div>
+    <label class="f">Адрес сервера (Cloud Run функция)</label><input class="in" value="${esc(c.authUrl||'')}" placeholder="https://hedera-bot-xxxx.a.run.app" onchange="company.authUrl=this.value.trim();markDirty()" />
+    <div class="hint" style="margin-top:6px">Тот же адрес, что у голосового бота. Когда он заполнен, приложения подтверждают вход через сервер и можно включать закрытые правила доступа.</div>
+  </div>
+  <div class="card"><h3>Направления</h3><div class="hint">Что показывать в хабе. Выключенные направления скрыты у всех.</div>
+    ${Object.entries(c.directions).map(([id,v]) => `<div class="switch"><div><div class="li-name">${DIR_META[id]?DIR_META[id].icon:'•'} <input class="in" style="display:inline-block;width:60%;padding:6px 8px" value="${esc(v.name)}" onchange="company.directions['${id}'].name=this.value;markDirty()" /></div><div class="li-sub">${id}</div></div><input type="checkbox" ${v.active?'checked':''} onchange="company.directions['${id}'].active=this.checked;markDirty();render()" /></div>`).join('')}
+  </div>
+  <div class="card"><h3>Безопасность</h3>
+    <div class="hint">Сервер: <b id="srv-status">${c.authUrl ? esc(c.authUrl) : 'ещё не подключился'}</b>. Когда бот отвечает и вход работает — нажми кнопку: сервер сам опубликует закрытые правила доступа (цены только диспетчеру, клиент видит только своё).</div>
+    <button class="btn p w" onclick="publishRules()" ${c.authUrl?'':'disabled'}>🔒 Включить закрытые правила доступа</button>
+    <div style="height:8px"></div>
+    <button class="btn s w" onclick="serverStatus()" ${c.authUrl?'':'disabled'}>Проверить сервер</button>
+  </div>
+  <div class="card"><h3>Служебное</h3>
+    <div class="kv"><span>Идентификатор компании</span><b>${COMPANY_ID}</b></div>
+    <div class="kv"><span>Направлений с данными</span><b>${Object.keys(dirs).length}</b></div>
+    <div style="height:10px"></div>
+    <button class="btn d w" onclick="seedHedera()">Перезаписать данными Hedera Garden</button>
+  </div>`;
+}
+function flatClients(d) {
+  const rows = [];
+  Object.entries(d.schedule||{}).forEach(([sk, slot]) => (slot.clients||[]).forEach(c => rows.push(Object.assign({ slotKey: sk, day: sk.split('-')[0], crew: sk.split('-')[1], price: (d.prices||{})[sk+'_'+c.n] || 0 }, c))));
+  return rows;
+}
+function renderClients() {
+  const d = dirs[curDir]; const rows = flatClients(d);
+  const isTop = d.unit === 'people';
+  const byDay = {}; rows.forEach(r => { (byDay[r.day] = byDay[r.day] || []).push(r); });
+  let html = `<div class="card" style="display:flex;justify-content:space-between;align-items:center;"><div><div class="li-name">${rows.length} объектов · ${Object.keys(d.brigades||{}).length} машин</div><div class="li-sub">Нажми на клиента, чтобы изменить. Цена видна только диспетчеру.</div></div><button class="btn p" onclick="editClient(null)">+ Клиент</button></div>`;
+  if (!rows.length && isTop) html += `<div class="card"><div class="hint" style="margin:0">В топиаре объекты создаёт диспетчер под конкретный день в самом приложении. Здесь можно завести постоянных клиентов с фиксированным днём.</div></div>`;
+  DAYS.forEach(day => {
+    const list = (byDay[day]||[]).sort((a,b)=>(+a.crew)-(+b.crew)||a.n-b.n);
+    if (!list.length) return;
+    html += `<div class="group-h"><span>${day}</span><span>${list.length}</span></div><div class="card" style="padding:4px 14px">` + list.map(r => `
+      <div class="list-item" onclick="editClient('${r.slotKey}',${r.n})">
+        <span class="pill on">М${r.crew}</span>
+        <div class="li-main"><div class="li-name">${esc(r.name)}</div><div class="li-sub">${esc(r.sector||'')} · ${esc(r.address||'')}${r.m2?' · '+r.m2+' м²':''}${(r.conditions||[]).length?' · '+(r.conditions||[]).length+' услов.':''}</div></div>
+        <div class="li-price">${r.price?r.price.toLocaleString('ru-RU')+' '+(company.currency||{}).symbol:'—'}</div>
+      </div>`).join('') + `</div>`;
+  });
+  return html;
+}
+function editClient(slotKey, n) {
+  const d = dirs[curDir]; const crews = Object.keys(d.brigades||{'1':1}).sort((a,b)=>(+a)-(+b));
+  let e;
+  if (window._ec && window._ec._reopen && window._ec.orig.slotKey === slotKey && window._ec.orig.n === n) {
+    e = window._ec; e._reopen = false;               // повторное открытие после «+ условие» — сохраняем набранное
+  } else {
+    let c = { name:'', sector:'', address:'', m2:'', time_h:1, conditions:[] }, day = 'Пн', crew = crews[0], price = '';
+    if (slotKey) { const slot = d.schedule[slotKey]; c = clone(slot.clients.find(x=>x.n===n)); c.conditions = c.conditions || []; day = slotKey.split('-')[0]; crew = slotKey.split('-')[1]; price = (d.prices||{})[slotKey+'_'+n] || ''; }
+    e = window._ec = { orig:{slotKey,n}, c, day, crew, price, _reopen:false };
+  }
+  renderClientModal(e, crews, d);
+}
+function renderClientModal(e, crews, d){ const c=e.c; const condRow=(cd,i)=>`<div class="cond"><select class="in" onchange="_ec.c.conditions[${i}].type=this.value">${Object.entries(COND_TYPES).map(([k,v])=>`<option value="${k}" ${cd.type===k?'selected':''}>${v}</option>`).join('')}</select><input class="in" value="${esc(cd.text)}" placeholder="Текст" onchange="_ec.c.conditions[${i}].text=this.value" /><button class="btn d" onclick="_ec.c.conditions.splice(${i},1);_ec._reopen=true;editClient(_ec.orig.slotKey,_ec.orig.n)">×</button></div>`;
+  showModal(`<h2>${e.orig.slotKey?'Клиент':'Новый клиент'}</h2>
+    <label class="f">Имя / объект</label><input class="in" value="${esc(c.name)}" onchange="_ec.c.name=this.value" />
+    <div class="row"><div><label class="f">Сектор</label><input class="in" value="${esc(c.sector)}" onchange="_ec.c.sector=this.value" /></div><div><label class="f">Адрес</label><input class="in" value="${esc(c.address)}" onchange="_ec.c.address=this.value" /></div></div>
+    <div class="row3">
+      <div><label class="f">День</label><select class="in" onchange="_ec.day=this.value">${DAYS.map(x=>`<option ${e.day===x?'selected':''}>${x}</option>`).join('')}</select></div>
+      <div><label class="f">Машина</label><select class="in" onchange="_ec.crew=this.value">${crews.map(x=>`<option value="${x}" ${e.crew===x?'selected':''}>Машина ${x}</option>`).join('')}</select></div>
+      <div><label class="f">Цена, ${(company.currency||{}).symbol}</label><input class="in" type="number" value="${e.price}" onchange="_ec.price=this.value" /></div>
+    </div>
+    <div class="row"><div><label class="f">${d.unit==='people'?'Человек':'Площадь, м²'}</label><input class="in" type="number" value="${d.unit==='people'?(c.people||2):(c.m2||'')}" onchange="${d.unit==='people'?'_ec.c.people':'_ec.c.m2'}=+this.value" /></div><div><label class="f">Плановое время, ч</label><input class="in" type="number" step="0.1" value="${c.time_h||1}" onchange="_ec.c.time_h=+this.value" /></div></div>
+    <label class="f">Особые условия (видит бригадир)</label><div id="cond-list">${(c.conditions||[]).map(condRow).join('')}</div>
+    <button class="btn s" style="margin-top:8px" onclick="_ec.c.conditions.push({type:'warn',text:''});_ec._reopen=true;editClient(_ec.orig.slotKey,_ec.orig.n)">+ условие</button>
+    <div class="actions">${e.orig.slotKey?'<button class="btn d" onclick="deleteClient()">Удалить</button>':''}<button class="btn s" onclick="closeModal()">Отмена</button><button class="btn p" onclick="saveClient()">Готово</button></div>`); }
+function saveClient() {
+  const e = window._ec; const d = dirs[curDir];
+  if (!e.c.name || !e.c.name.trim()) { toast('Введи имя клиента'); return; }
+  e.c.conditions = (e.c.conditions||[]).filter(x => x.text && x.text.trim());
+  const newSlot = e.day + '-' + e.crew;
+  d.schedule = d.schedule || {}; d.prices = d.prices || {};
+  if (!d.schedule[newSlot]) d.schedule[newSlot] = { label: newSlot, clients: [] };
+  if (e.orig.slotKey && e.orig.slotKey !== newSlot) {
+    // переезд в другой день/машину → новый номер в новом слоте
+    d.schedule[e.orig.slotKey].clients = d.schedule[e.orig.slotKey].clients.filter(x => x.n !== e.orig.n);
+    delete d.prices[e.orig.slotKey + '_' + e.orig.n];
+    e.orig.slotKey = null;
+  }
+  if (e.orig.slotKey) {
+    const idx = d.schedule[newSlot].clients.findIndex(x => x.n === e.orig.n);
+    e.c.n = e.orig.n; d.schedule[newSlot].clients[idx] = e.c;
+  } else {
+    const maxN = d.schedule[newSlot].clients.reduce((m, x) => Math.max(m, x.n || 0), 0);
+    e.c.n = maxN + 1; d.schedule[newSlot].clients.push(e.c);
+  }
+  if (e.price !== '' && e.price != null) d.prices[newSlot + '_' + e.c.n] = +e.price; else delete d.prices[newSlot + '_' + e.c.n];
+  closeModal(); markDirty(); render();
+}
+function deleteClient() {
+  const e = window._ec; const d = dirs[curDir];
+  if (!confirm('Удалить клиента «' + e.c.name + '» из графика? История визитов останется.')) return;
+  d.schedule[e.orig.slotKey].clients = d.schedule[e.orig.slotKey].clients.filter(x => x.n !== e.orig.n);
+  delete d.prices[e.orig.slotKey + '_' + e.orig.n];
+  closeModal(); markDirty(); render();
+}
+function renderCrews() {
+  const d = dirs[curDir]; const crews = Object.keys(d.brigades||{}).sort((a,b)=>(+a)-(+b));
+  return `<div class="card"><h3>Машины / бригады · ${crews.length}</h3><div class="hint">Каждая машина — отдельный маршрут на день. Имена водителя и помощника бригадир может менять сам в приложении.</div>
+    ${crews.map(k => `<div class="card" style="background:var(--bone);box-shadow:none"><div style="display:flex;justify-content:space-between;align-items:center"><b>Машина ${k}</b>${crews.length>1?`<button class="btn d" onclick="removeCrew('${k}')">Удалить</button>`:''}</div>
+      <div class="row"><div><label class="f">Водитель</label><input class="in" value="${esc(d.brigades[k].driver)}" onchange="dirs[curDir].brigades['${k}'].driver=this.value;markDirty()" /></div><div><label class="f">Помощник</label><input class="in" value="${esc(d.brigades[k].helper)}" onchange="dirs[curDir].brigades['${k}'].helper=this.value;markDirty()" /></div></div>
+      <div class="li-sub" style="margin-top:8px">Объектов в неделю: ${flatClients(d).filter(r=>r.crew===k).length}</div></div>`).join('')}
+    <button class="btn p w" onclick="addCrew()">+ Добавить машину</button></div>`;
+}
+function addCrew(){ const d=dirs[curDir]; d.brigades=d.brigades||{}; const next=String(Object.keys(d.brigades).reduce((m,k)=>Math.max(m,+k),0)+1); d.brigades[next]={driver:'',helper:'',helperUntil:null}; markDirty(); render(); }
+function removeCrew(k){ const d=dirs[curDir]; const has=flatClients(d).filter(r=>r.crew===k).length; if(has){ toast('Сначала перенеси '+has+' объектов на другую машину'); return; } if(!confirm('Удалить машину '+k+'?')) return; delete d.brigades[k]; DAYS.forEach(day=>{ delete (d.schedule||{})[day+'-'+k]; }); markDirty(); render(); }
+function renderTasks() {
+  const d = dirs[curDir];
+  return `<div class="card"><h3>Чек-лист бригадира</h3><div class="hint">Что бригадир отмечает галочками на каждом объекте. Одна строка — одна задача. Порядок как здесь.</div>
+    <textarea class="in" rows="6" onchange="dirs[curDir].tasks=this.value.split('\\n').map(s=>s.trim()).filter(Boolean);markDirty()">${esc((d.tasks||[]).join('\n'))}</textarea></div>`;
+}
+function renderExtras() {
+  const d = dirs[curDir]; const list = Object.values(d.extraServices||{});
+  return `<div class="card"><h3>Дополнительные услуги</h3><div class="hint">Диспетчер назначает их к визиту, клиент может заказать в кабинете. Цена — за 100 м² (или фиксированная, если м² нет).</div>
+    ${list.map(s => `<div class="list-item" onclick="editExtra('${s.id}')"><span style="font-size:20px">${s.icon||'•'}</span><div class="li-main"><div class="li-name">${esc(s.label)}</div><div class="li-sub">${esc(s.short||'')}${s.unitLabel?' · '+esc(s.unitLabel):''}</div></div><div class="li-price">${s.pricePer100m2?s.pricePer100m2+' '+(company.currency||{}).symbol:'—'}</div></div>`).join('')}
+    <button class="btn p w" style="margin-top:10px" onclick="editExtra(null)">+ Услуга</button></div>`;
+}
+function editExtra(id) {
+  const d = dirs[curDir]; const s = id ? clone(d.extraServices[id]) : { id:'', label:'', short:'', icon:'🌱', color:'#5d7a4f', unitLabel:'', pricePer100m2:0 };
+  window._ex = { orig:id, s };
+  showModal(`<h2>${id?'Услуга':'Новая услуга'}</h2>
+    <label class="f">Название</label><input class="in" value="${esc(s.label)}" onchange="_ex.s.label=this.value" />
+    <div class="row3"><div><label class="f">Коротко</label><input class="in" value="${esc(s.short)}" onchange="_ex.s.short=this.value" /></div><div><label class="f">Иконка</label><input class="in" value="${esc(s.icon)}" onchange="_ex.s.icon=this.value" /></div><div><label class="f">Цвет</label><input class="in" type="color" value="${s.color||'#5d7a4f'}" onchange="_ex.s.color=this.value" /></div></div>
+    <div class="row"><div><label class="f">Цена за 100 м², ${(company.currency||{}).symbol}</label><input class="in" type="number" value="${s.pricePer100m2||0}" onchange="_ex.s.pricePer100m2=+this.value" /></div><div><label class="f">Единица расхода</label><input class="in" value="${esc(s.unitLabel)}" placeholder="кг удобрения" onchange="_ex.s.unitLabel=this.value" /></div></div>
+    <div class="actions">${id?'<button class="btn d" onclick="delete dirs[curDir].extraServices[_ex.orig];closeModal();markDirty();render()">Удалить</button>':''}<button class="btn s" onclick="closeModal()">Отмена</button><button class="btn p" onclick="saveExtra()">Готово</button></div>`);
+}
+function saveExtra(){ const e=window._ex; const d=dirs[curDir]; if(!e.s.label.trim()){toast('Введи название');return;} d.extraServices=d.extraServices||{}; if(!e.orig){ e.s.id = e.s.label.toLowerCase().replace(/[^a-z0-9а-яё]+/gi,'_').slice(0,20) + '_' + Date.now().toString(36).slice(-3); } else e.s.id=e.orig; d.extraServices[e.s.id]=e.s; closeModal(); markDirty(); render(); }
+function renderSkips() {
+  const d = dirs[curDir];
+  return `<div class="card"><h3>Причины пропуска</h3><div class="hint">Бригадир выбирает одну, когда объект не сделан. Одна строка — одна причина; последняя обычно «Другое».</div>
+    <textarea class="in" rows="7" onchange="dirs[curDir].skipReasons=this.value.split('\\n').map(s=>s.trim()).filter(Boolean).map((label,i)=>({id:'r'+i,label}));markDirty()">${esc((d.skipReasons||[]).map(r=>r.label).join('\n'))}</textarea></div>`;
+}
+async function serverCall(path){
+  const initData = (window.Telegram && Telegram.WebApp && Telegram.WebApp.initData) || '';
+  const r = await fetch(company.authUrl.replace(/\/$/, '') + path, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ initData }) });
+  const j = await r.json().catch(()=>({}));
+  if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+  return j;
+}
+async function publishRules(){
+  if (!confirm('Включить закрытые правила? После этого приложения работают только через подтверждённый вход Telegram. Убедись, что бот отвечает и ты вошёл в газон без ошибок.')) return;
+  try { const j = await serverCall('/admin/rules'); toast('🔒 Правила опубликованы: ' + (j.published||[]).join(', ')); }
+  catch(e) { toast('Не удалось: ' + e.message); }
+}
+async function serverStatus(){
+  try { const j = await serverCall('/admin/status'); toast('Сервер OK · бот ' + (j.webhook ? 'подключён' : 'НЕ подключён') + ' · распознавание ' + (j.hasGemini ? 'есть' : 'нет ключа')); }
+  catch(e) { toast('Сервер не отвечает: ' + e.message); }
+}
+function showModal(html){ document.getElementById('modal-root').innerHTML = `<div class="modal-bg" onclick="if(event.target===this)closeModal()"><div class="modal">${html}</div></div>`; }
+function closeModal(){ document.getElementById('modal-root').innerHTML=''; }
+
+(async () => { if (await gate()) await reloadAll(); })();
+</script>
+</body>
+</html>
