@@ -1,8 +1,9 @@
 {
   "name": "hedera-voice-bot",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "main": "index.js",
   "engines": { "node": "20" },
+  "scripts": { "start": "node server.js" },
   "dependencies": {
     "firebase-admin": "^12.0.0"
   }
