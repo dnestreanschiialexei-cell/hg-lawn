@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="theme-color" content="#0f221a" />
+<title>Hedera · Создание</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,600;9..144,700&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{--forest:#1a3829;--forest-deep:#0f221a;--bone:#f5f1e8;--moss:#5d7a4f;--amber:#c89b3d;--green:#4caf50;}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;font-family:'Manrope',system-ui,sans-serif;background:#000;}
+  body{display:flex;justify-content:center;align-items:center;min-height:100vh;background:radial-gradient(ellipse at top,#1a3829,#0f221a 70%);}
+  .app{width:100%;max-width:430px;min-height:100vh;background:linear-gradient(180deg,var(--forest),var(--forest-deep));display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 30px;text-align:center;color:var(--bone);position:relative;overflow:hidden;}
+  @media(min-width:500px){.app{border-radius:32px;min-height:auto;height:700px;}}
+  .grain{position:absolute;inset:0;pointer-events:none;opacity:0.05;mix-blend-mode:multiply;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence baseFrequency='0.9'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");}
+  .logo-mark{width:52px;height:52px;background:var(--bone);border-radius:13px;display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:700;font-size:24px;color:var(--forest-deep);letter-spacing:-0.03em;margin-bottom:26px;}
+  .logo-mark span{color:var(--green);}
+  .icon{font-size:44px;margin-bottom:18px;}
+  h1{font-family:'Fraunces',serif;font-size:36px;letter-spacing:-0.02em;margin:0 0 8px;line-height:1.1;}
+  h1 em{font-style:italic;font-weight:300;}
+  .sub{font-size:13px;opacity:0.6;line-height:1.6;margin-bottom:34px;}
+  .tag{font-size:9px;letter-spacing:0.3em;text-transform:uppercase;background:rgba(200,155,61,0.2);border:1px solid var(--amber);color:var(--amber);padding:7px 16px;border-radius:20px;margin-bottom:40px;}
+  .back{background:rgba(245,241,232,0.08);border:1px solid rgba(245,241,232,0.15);color:var(--bone);padding:15px 30px;border-radius:14px;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;text-decoration:none;transition:all 0.2s;}
+  .back:active{transform:scale(0.97);}
+  .foot{position:absolute;bottom:26px;left:0;right:0;text-align:center;opacity:0.3;font-size:9px;letter-spacing:0.25em;text-transform:uppercase;}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="grain"></div>
+  <div class="logo-mark">H<span>G</span></div>
+  <div class="icon">🏗</div>
+  <h1>Создание<br/><em>с нуля</em></h1>
+  <div class="sub">Проекты озеленения под ключ:<br/>дизайн, посадка, газон, автополив.</div>
+  <div class="tag">Скоро запуск</div>
+  <a class="back" href="../">← Вернуться к направлениям</a>
+  <div class="foot">Hedera Garden · The Art of Green</div>
+</div>
+<script>
+try { if (window.Telegram && Telegram.WebApp) { Telegram.WebApp.ready(); Telegram.WebApp.expand(); } } catch(e) {}
+</script>
+</body>
+</html>
