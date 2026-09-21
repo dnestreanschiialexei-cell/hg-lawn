@@ -765,6 +765,14 @@ async function loadConfig() {
     CREWS = Object.keys(DEFAULT_BRIGADES).sort((a, b) => (+a) - (+b));
     if (!CREWS.length) CREWS = ['1'];
     Object.keys(DEFAULT_BRIGADES).forEach(k => { if (!state.brigades[k]) state.brigades[k] = JSON.parse(JSON.stringify(DEFAULT_BRIGADES[k])); });
+    if (!ALL_CLIENTS.length && typeof FALLBACK !== 'undefined') {
+      ALL_CLIENTS = FALLBACK.clients; if (!Object.keys(DIRCFG && DIRCFG.brigades || {}).length) DEFAULT_BRIGADES = FALLBACK.brigades;
+      if (!(DIRCFG && DIRCFG.tasks && DIRCFG.tasks.length)) STD_TASKS = FALLBACK.tasks;
+      if (!(DIRCFG && DIRCFG.skipReasons && DIRCFG.skipReasons.length)) SKIP_REASONS = FALLBACK.skipReasons;
+      if (!(DIRCFG && DIRCFG.extraServices && Object.keys(DIRCFG.extraServices).length)) EXTRA_SERVICES = FALLBACK.extraServices;
+      CREWS = Object.keys(DEFAULT_BRIGADES).sort((a, b) => (+a) - (+b));
+      Object.keys(DEFAULT_BRIGADES).forEach(k => { if (!state.brigades[k] || !state.brigades[k].driver) state.brigades[k] = JSON.parse(JSON.stringify(DEFAULT_BRIGADES[k])); });
+    }
     rebuildClientsList();
   } catch(e) { console.warn('config load', e); }
   renderMachineButtons();
@@ -1022,6 +1030,7 @@ let SKIP_REASONS = [
 let CLIENT_PRICES = {}; // цены — только из закрытого документа, читает диспетчер
 
 let DEFAULT_BRIGADES = { '1': { driver: '', helper: '', helperUntil: null }, '2': { driver: '', helper: '', helperUntil: null } };
+// ВРЕМЕННО: запасные данные, пока настройки компании не загружены в базу. Как только в базе есть график — этот блок не используется.
 
 
 let state = {
