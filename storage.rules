@@ -1,0 +1,15 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function tg() { return request.auth != null && request.auth.token.tg == true; }
+    function roles() { return ('roles' in request.auth.token) ? request.auth.token.roles : {}; }
+    function role(d) { return (d in roles()) ? roles()[d] : ''; }
+    function isStaff() { return tg() && ((role('lawn') != '' && role('lawn') != 'client') || (role('topiary') != '' && role('topiary') != 'client')); }
+    // Фото и видео выездов: загружают сотрудники, размер до 25 МБ, только изображения и видео
+    match /{allPaths=**} {
+      allow read: if tg();
+      allow write: if isStaff() && request.resource.size < 25 * 1024 * 1024
+                   && (request.resource.contentType.matches('image/.*') || request.resource.contentType.matches('video/.*'));
+    }
+  }
+}
