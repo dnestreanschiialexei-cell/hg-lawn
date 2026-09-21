@@ -429,7 +429,7 @@
       </div>
     </div>
     <div class="welcome-mark">Газон</div>
-    <div class="welcome-sub" id="welcome-sub">Выбери свою машину один раз —<br/>дальше всё будет твоим.</div>
+    <div class="welcome-sub" id="welcome-sub">Доступ выдаёт диспетчер.<br/>Открой ссылку-приглашение, которую он прислал.</div>
   </div>
   <div class="welcome-q">
     <div class="welcome-q-l" id="welcome-q-label">Я работаю на</div>
@@ -781,9 +781,11 @@ function crewDaysLabel(m) {
   if (!days.length) return 'график задаёт диспетчер';
   return days.length === 6 ? 'Понедельник → Суббота · 6 рабочих дней' : days.join(', ');
 }
+let _workerInvite = null; // приглашение сотрудника (роль задана диспетчером)
 function renderMachineButtons() {
   const box = document.getElementById('machine-list'); if (!box) return;
-  box.innerHTML = CREWS.map(m => `<button class="machine-btn" data-machine="${m}" onclick="chooseMachine('${m}')">
+  if (!_workerInvite) { box.innerHTML = '<div style="font-size:12px;opacity:0.6;line-height:1.6;">Без приглашения войти нельзя.<br/>Диспетчер: «Управление ролями» → «Пригласить сотрудника».</div>'; return; }
+  box.innerHTML = CREWS.filter(m => m === _workerInvite.role).map(m => `<button class="machine-btn" data-machine="${m}" onclick="chooseMachine('${m}')">
       <div><div class="machine-btn-name">Машина ${m}</div><div class="machine-btn-sub">${crewDaysLabel(m)}</div></div>
       <div class="machine-btn-arrow">→</div></button>`).join('');
 }
@@ -2920,10 +2922,30 @@ async function openUserManagement(){
     <div class="modal-h">Управление ролями</div>
     <div class="modal-d">Кто на какой машине. Роль закрепляется за Telegram-аккаунтом — при следующем входе человек сразу попадает на свою машину без выбора.</div>
     <div id="users-list">${usersHtml}</div>
+    <div class="modal-label" style="margin-top:14px;">Пригласить сотрудника на машину</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+      ${CREWS.map(m => `<button class="picker-btn" style="min-width:auto;padding:8px 12px;" onclick="createWorkerInvite('${m}')"><div class="picker-btn-name" style="font-size:12px;">🔗 Машина ${m}</div></button>`).join('')}
+      <button class="picker-btn" style="min-width:auto;padding:8px 12px;" onclick="createWorkerInvite('disp')"><div class="picker-btn-name" style="font-size:12px;">🔗 Диспетчер</div></button>
+    </div>
+    <div style="font-size:10px;color:var(--moss);margin-top:6px;line-height:1.5;">Ссылка одноразовая: кто открыл — тот и закреплён. Сменить машину может только диспетчер здесь же.</div>
     <div class="modal-actions">
       <button class="modal-btn secondary" onclick="closeModal()">Закрыть</button>
     </div>
   `);
+}
+
+async function createWorkerInvite(role){
+  try {
+    const abc = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    const token = Array.from(crypto.getRandomValues(new Uint8Array(14))).map(b => abc[b % 36]).join('');
+    await db.collection(INVITES_COL).doc(token).set({ type: 'worker', role: String(role), direction: DIRECTION, createdAt: firebase.firestore.FieldValue.serverTimestamp(), by: tgUser ? tgUser.id : null });
+    const link = BOT_LINK + '?startapp=w_' + token;
+    const label = role === 'disp' ? 'Диспетчер' : 'Машина ' + role;
+    showModal(`<div class="modal-h">Приглашение · ${label}</div>
+      <div class="modal-d">Отправь сотруднику в Telegram или WhatsApp. Открыл — закрепился за «${label}», выбора у него не будет. Ссылка сгорает после первого использования.</div>
+      <div class="cl-invite-link" onclick="copyLink('${link}')">${link}<br/><br/>📋 Нажми чтобы скопировать</div>
+      <div class="modal-actions"><button class="modal-btn secondary" onclick="openUserManagement()">← Назад</button></div>`);
+  } catch(e) { toast('Не удалось создать: ' + (e.code || e.message)); }
 }
 
 async function changeUserRole(userId, role){
@@ -3347,6 +3369,21 @@ async function asyncBoot() {
 
     // Личная ссылка-приглашение клиента: startapp=i_<токен>
     const startParam = Telegram.WebApp.initDataUnsafe?.start_param || '';
+    // Приглашение сотрудника: startapp=w_<токен> → роль из приглашения, без выбора
+    if (/^w_[a-z0-9]{8,}$/.test(startParam)) {
+      try {
+        const inv = await db.collection(INVITES_COL).doc(startParam.slice(2)).get();
+        if (inv.exists && inv.data().type === 'worker' && !inv.data().usedBy) {
+          const d = inv.data();
+          await db.collection(USERS_COL).doc(tgUser.id).set({ role: String(d.role), name: tgUser.name, username: tgUser.username, invitedBy: d.by || null, inviteToken: startParam.slice(2), updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+          try { await db.collection(INVITES_COL).doc(startParam.slice(2)).set({ usedBy: tgUser.id, usedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true }); } catch(e) {}
+          await ensureAuth();
+          state.machine = String(d.role); persist(); bootApp(); return;
+        } else {
+          document.getElementById('welcome-sub').innerHTML = 'Эта ссылка уже использована или отозвана.<br/>Попроси у диспетчера новую.';
+        }
+      } catch(e) { console.warn('worker invite', e); }
+    }
     if (/^i_[a-z0-9]{8,}$/.test(startParam)) {
       try {
         const inv = await db.collection(INVITES_COL).doc(startParam.slice(2)).get();
