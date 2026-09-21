@@ -134,15 +134,22 @@ service cloud.firestore {
 
     // ---------- роли ----------
     // Сотрудник может создать только свою запись и не может назначить себя диспетчером
+    function inviteOk(col) {
+      return 'inviteToken' in request.resource.data
+        && exists(/databases/$(database)/documents/$(col)/$(request.resource.data.inviteToken))
+        && get(/databases/$(database)/documents/$(col)/$(request.resource.data.inviteToken)).data.type == 'worker'
+        && get(/databases/$(database)/documents/$(col)/$(request.resource.data.inviteToken)).data.role == request.resource.data.role
+        && !('usedBy' in get(/databases/$(database)/documents/$(col)/$(request.resource.data.inviteToken)).data);
+    }
     match /users/{uid} {
       allow read: if isStaff() || isSelf(uid);
-      allow create: if isDisp() || (isSelf(uid) && request.resource.data.role != 'disp');
+      allow create: if isDisp() || (isSelf(uid) && (request.resource.data.role != 'disp' || inviteOk('invites')));
       allow update: if isDisp() || (isSelf(uid) && request.resource.data.role == resource.data.role);
       allow delete: if isDisp();
     }
     match /topiary_users/{uid} {
       allow read: if isStaff() || isSelf(uid);
-      allow create: if isDisp() || (isSelf(uid) && request.resource.data.role != 'disp');
+      allow create: if isDisp() || (isSelf(uid) && (request.resource.data.role != 'disp' || inviteOk('topiary_invites')));
       allow update: if isDisp() || (isSelf(uid) && request.resource.data.role == resource.data.role);
       allow delete: if isDisp();
     }
@@ -156,8 +163,9 @@ service cloud.firestore {
     match /topiary_history/{h} { allow read: if isStaff() || (isClient() && resource.data.clientName == myClientName()); allow write: if isStaff(); }
 
     // ---------- приглашения клиентов: создаёт диспетчер, читает тот, кто открыл ссылку ----------
-    match /invites/{t}         { allow read: if tg(); allow write: if isDisp(); }
-    match /topiary_invites/{t} { allow read: if tg(); allow write: if isDisp(); }
+    // Приглашения: создаёт диспетчер; открывший может только пометить «использовано» (один раз)
+    match /invites/{t}         { allow read: if tg(); allow create, delete: if isDisp(); allow update: if isDisp() || (tg() && !('usedBy' in resource.data) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['usedBy','usedAt'])); }
+    match /topiary_invites/{t} { allow read: if tg(); allow create, delete: if isDisp(); allow update: if isDisp() || (tg() && !('usedBy' in resource.data) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['usedBy','usedAt'])); }
 
     // ---------- сообщения и заявки ----------
     match /client_messages/{m}  { allow create: if tg(); allow read, update: if isStaff(); }
