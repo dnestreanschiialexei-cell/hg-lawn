@@ -282,8 +282,21 @@
   .disp-machine-n{font-family:'Fraunces',serif;font-size:18px;color:var(--forest-deep);letter-spacing:-0.02em;}
   .disp-machine-status{font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:var(--moss);}
   .disp-machine-meta{display:flex;gap:10px;margin-top:8px;font-size:10px;color:var(--moss);font-family:'JetBrains Mono',monospace;}
-  .disp-client-mini{padding:6px 8px;background:var(--bone);border-radius:8px;margin-top:5px;font-size:11px;display:flex;justify-content:space-between;align-items:center;}
-  .disp-client-mini-name{color:var(--forest-deep);flex:1;}
+  .disp-client-mini{padding:8px 6px 8px 10px;background:var(--bone);border-radius:10px;margin-top:6px;font-size:12px;display:flex;align-items:center;gap:8px;cursor:pointer;}
+  .disp-client-mini:active{background:var(--cream);}
+  .sdot{width:9px;height:9px;border-radius:50%;flex-shrink:0;background:#c9c4b4;box-shadow:inset 0 0 0 1px rgba(0,0,0,0.06);}
+  .sdot.s-grey{background:#c9c4b4;} .sdot.s-amber{background:var(--amber);} .sdot.s-green{background:#4caf50;} .sdot.s-red{background:var(--terra);}
+  .dcm-title{color:var(--forest-deep);font-weight:500;line-height:1.25;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
+  .dcm-flag{margin-right:3px;}
+  .dcm-tags{margin-top:3px;display:flex;flex-wrap:wrap;gap:3px;}
+  .dcm-tags .disp-extra-badge{margin-left:0;}
+  .dcm-more{flex-shrink:0;width:30px;height:30px;border-radius:8px;border:none;background:transparent;color:var(--moss);font-size:18px;line-height:1;cursor:pointer;padding:0;letter-spacing:-1px;}
+  .dcm-more:active{background:var(--cream);}
+  .act-btn{display:flex;align-items:center;gap:12px;width:100%;padding:13px 14px;border-radius:12px;border:none;background:var(--cream);font-family:inherit;font-size:14px;color:var(--forest-deep);cursor:pointer;text-align:left;margin-top:6px;}
+  .act-btn:active{transform:scale(0.98);}
+  .act-btn .ico{width:24px;text-align:center;font-size:16px;flex-shrink:0;}
+  .act-btn .sub{font-size:11px;color:var(--moss);margin-top:1px;}
+  .disp-client-mini-name{color:var(--forest-deep);flex:1;min-width:0;}
   .disp-client-mini-move{background:transparent;border:none;color:var(--moss);font-size:14px;cursor:pointer;padding:2px 4px;}
   .disp-add-new{background:var(--terra);color:var(--bone);padding:10px;border-radius:10px;font-family:inherit;font-size:11px;font-weight:600;border:none;cursor:pointer;margin:8px 14px 0;display:block;width:calc(100% - 28px);}
 
@@ -2245,32 +2258,17 @@ function renderDisp(){
             const vs = getVisitState(day + '-' + m, c);
             const statusDot = getStatusDot(vs);
             return `
-            <div class="disp-client-mini" style="cursor:pointer;" onclick="openDispVisitDetail('${day}-${m}', ${c.n}, '${c.name.replace(/'/g,"\\'")}')">
+            <div class="disp-client-mini" onclick="openDispVisitDetail('${day}-${m}', ${c.n}, '${c.name.replace(/'/g,"\\'")}')">
+              <span class="sdot ${statusClass(vs)}"></span>
               <div class="disp-client-mini-name">
-                <span style="font-size:8px;margin-right:4px;">${statusDot}</span>
-                ${c.transferred ? '<span style="color:var(--amber);">↪ </span>' : ''}
-                ${c.isExtra ? '<span style="color:var(--terra);">⚡ </span>' : ''}
-                ${c.displayN}. ${c.name}
-                ${cExtras.map(es => {
-                  if (es.custom) {
-                    return `<span class="disp-extra-badge" style="background:#c89b3d;color:#0f221a;">★ ${es.customLabel}</span>`;
-                  }
-                  const cfg = EXTRA_SERVICES[es.serviceId];
-                  if (!cfg) return '';
+                <div class="dcm-title">${c.transferred ? '<span class="dcm-flag" style="color:var(--amber);">↪</span>' : ''}${c.isExtra ? '<span class="dcm-flag" style="color:var(--terra);">⚡</span>' : ''}${c.displayN}. ${esc(c.name)}</div>
+                ${(cExtras.length || (() => { const vp = getVisitPrice(day+'-'+m, c, getWeekOffset(weekOffset)); return vp.type !== 'normal'; })()) ? `<div class="dcm-tags">${cExtras.map(es => {
+                  if (es.custom) return `<span class="disp-extra-badge" style="background:#c89b3d;color:#0f221a;">★ ${esc(es.customLabel)}</span>`;
+                  const cfg = EXTRA_SERVICES[es.serviceId]; if (!cfg) return '';
                   return `<span class="disp-extra-badge" style="background:${cfg.color};">${cfg.icon} ${cfg.short}</span>`;
-                }).join('')}
+                }).join('')}${(() => { const vp = getVisitPrice(day+'-'+m, c, getWeekOffset(weekOffset)); if (vp.type === 'free') return '<span class="disp-extra-badge" style="background:var(--rust);">БЕСПЛАТНО</span>'; if (vp.type === 'discount') return '<span class="disp-extra-badge" style="background:var(--amber);color:var(--forest-deep);">СКИДКА</span>'; if (vp.type === 'extra') return '<span class="disp-extra-badge" style="background:var(--moss);">' + vp.label + '</span>'; return ''; })()}</div>` : ''}
               </div>
-              <div style="display:flex;gap:2px;align-items:center;" onclick="event.stopPropagation();">
-                <div class="disp-reorder">
-                  <button class="disp-reorder-btn" onclick="reorderClient('${day}-${m}',${c.displayN},-1)">▲</button>
-                  <button class="disp-reorder-btn" onclick="reorderClient('${day}-${m}',${c.displayN},1)">▼</button>
-                </div>
-                <button class="disp-client-mini-move" onclick="openPriceOverride('${day}-${m}',${c.displayN},'${c.name.replace(/'/g,"\\'")}')" title="Оплата">💰</button>
-                <button class="disp-client-mini-move" onclick="openEditNotes('${day}-${m}',${c.n},'${c.name.replace(/'/g,"\\'")}')" title="Редактировать заметки">✏️</button>
-                <button class="disp-client-mini-move" onclick="openClientInvite(${CLIENTS_LIST.findIndex(cl => cl.name === c.name)})" title="Пригласить клиента">🔗</button>
-                <button class="disp-client-mini-move" onclick="openAssignExtras('${day}-${m}', ${c.n}, '${visitKeyOf(day+'-'+m, c)}')" title="Доп. услуги">+</button>
-                <button class="disp-client-mini-move" onclick="openTransfer('${day}-${m}', ${c.displayN})" title="Перенести">⇄</button>
-              </div>
+              <button class="dcm-more" onclick="event.stopPropagation();openClientActions('${day}-${m}', ${c.displayN})" aria-label="Действия">⋯</button>
             </div>`;
           }).join('')}
         </div>
@@ -2381,6 +2379,35 @@ function setPriceCustom(key) {
   state.priceOverrides[key] = { type: 'discount', amount: val };
   persist(); closeModal(); renderDisp();
   toast('💰 Цена изменена: ' + val + ' лей');
+}
+
+function statusClass(vs) {
+  const d = getStatusDot(vs);
+  return d === '🟢' ? 's-green' : d === '🟡' ? 's-amber' : d === '🔴' ? 's-red' : 's-grey';
+}
+function openClientActions(slotKey, displayN) {
+  const slot = getEffectiveSlot(slotKey);
+  const c = slot.clients.find(x => x.displayN === displayN);
+  if (!c) return;
+  const nm = c.name.replace(/'/g, "\\'");
+  const clientIdx = CLIENTS_LIST.findIndex(cl => cl.name === c.name);
+  const vk = visitKeyOf(slotKey, c);
+  const isFirst = displayN === 1, isLast = displayN === slot.clients.length;
+  showModal(`
+    <div class="modal-h">${esc(c.name)}</div>
+    <div class="modal-d">${esc(c.sector || '')}${c.address ? ' · ' + esc(c.address) : ''} · ${slotKey}</div>
+    <button class="act-btn" onclick="closeModal();openDispVisitDetail('${slotKey}', ${c.n}, '${nm}')"><span class="ico">👁</span><div>Детали визита<div class="sub">статус, фото, заметки, история</div></div></button>
+    <button class="act-btn" onclick="closeModal();openEditNotes('${slotKey}', ${c.n}, '${nm}')"><span class="ico">✏️</span><div>Заметка бригаде</div></button>
+    <button class="act-btn" onclick="closeModal();openAssignExtras('${slotKey}', ${c.n}, '${vk}')"><span class="ico">🌱</span><div>Дополнительные услуги</div></button>
+    <button class="act-btn" onclick="closeModal();openPriceOverride('${slotKey}', ${displayN}, '${nm}')"><span class="ico">💰</span><div>Оплата<div class="sub">полная · бесплатно · своя сумма</div></div></button>
+    <button class="act-btn" onclick="closeModal();openTransfer('${slotKey}', ${displayN})"><span class="ico">⇄</span><div>Перенести на другой день / машину</div></button>
+    <div style="display:flex;gap:6px;">
+      <button class="act-btn" ${isFirst ? 'disabled style="opacity:0.4"' : ''} onclick="closeModal();reorderClient('${slotKey}', ${displayN}, -1)"><span class="ico">▲</span><div>Выше</div></button>
+      <button class="act-btn" ${isLast ? 'disabled style="opacity:0.4"' : ''} onclick="closeModal();reorderClient('${slotKey}', ${displayN}, 1)"><span class="ico">▼</span><div>Ниже</div></button>
+    </div>
+    ${clientIdx >= 0 ? `<button class="act-btn" onclick="closeModal();openClientInvite(${clientIdx})"><span class="ico">🔗</span><div>Пригласить клиента в кабинет</div></button>` : ''}
+    <div class="modal-actions"><button class="modal-btn secondary" onclick="closeModal()">Закрыть</button></div>
+  `);
 }
 
 function getStatusDot(vs) {
