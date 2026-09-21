@@ -598,7 +598,8 @@ const BOT_LINK = 'https://t.me/HgLawn_bot/lawn';
 // Офлайн-кэш: галочки и заметки сохраняются без связи и уходят в облако при её появлении
 try { db.enablePersistence({ synchronizeTabs: true }).catch(() => {}); } catch(e) {}
 // Анонимный вход — нужен для закрытых правил доступа (request.auth != null)
-let AUTH_MODE = 'none';   // 'tg' — подтверждённая личность Telegram, 'anon' — временный вход без подтверждения
+let AUTH_MODE = 'none';
+let _configError = null;   // 'tg' — подтверждённая личность Telegram, 'anon' — временный вход без подтверждения
 let AUTH_CLAIMS = null;
 async function ensureAuth() {
   try {
@@ -765,6 +766,10 @@ async function loadConfig() {
     CREWS = Object.keys(DEFAULT_BRIGADES).sort((a, b) => (+a) - (+b));
     if (!CREWS.length) CREWS = ['1'];
     Object.keys(DEFAULT_BRIGADES).forEach(k => { if (!state.brigades[k]) state.brigades[k] = JSON.parse(JSON.stringify(DEFAULT_BRIGADES[k])); });
+    rebuildClientsList();
+  } catch(e) { console.warn('config load', e); _configError = e; }
+  // Запасные данные — в любом случае, даже если база не ответила
+  try {
     if (!Object.values(BASE_SCHEDULE).some(s => (s.clients || []).length) && typeof FALLBACK !== 'undefined') {
       BASE_SCHEDULE = FALLBACK.schedule; if (!Object.keys(CLIENT_PRICES).length) CLIENT_PRICES = FALLBACK.prices;
       if (!Object.keys(DIRCFG && DIRCFG.brigades || {}).length) DEFAULT_BRIGADES = FALLBACK.brigades;
@@ -775,14 +780,20 @@ async function loadConfig() {
       Object.keys(DEFAULT_BRIGADES).forEach(k => { if (!state.brigades[k] || !state.brigades[k].driver) state.brigades[k] = JSON.parse(JSON.stringify(DEFAULT_BRIGADES[k])); });
     }
     rebuildClientsList();
-  } catch(e) { console.warn('config load', e); }
+  } catch(e) { console.warn('fallback', e); }
   renderMachineButtons();
   const hasClients = Object.values(BASE_SCHEDULE).some(s => (s.clients || []).length) || (typeof ALL_CLIENTS !== 'undefined' && ALL_CLIENTS.length);
   if (!hasClients) {
     const b = document.createElement('div');
     b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:500;background:var(--amber);color:var(--forest-deep);font-size:12px;padding:10px 14px;text-align:center;';
-    b.textContent = AUTH_MODE === 'tg' || AUTH_MODE === 'anon' ? 'Настройки компании не загружены. Диспетчер: хаб → ⚙ Настройки → «Загрузить данные Hedera» → Сохранить.' : 'Нет доступа. Откройте через Telegram.';
+    b.textContent = 'Настройки компании не загружены.';
     document.body.appendChild(b);
+  }
+  if (AUTH_MODE === 'none' || _configError) {
+    const w = document.createElement('div');
+    w.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:500;background:var(--rust);color:var(--bone);font-size:12px;padding:10px 14px;text-align:center;';
+    w.textContent = AUTH_MODE === 'none' ? 'Нет входа в базу — отметки не сохранятся. Владелец: Firebase → Authentication → Sign-in method → Anonymous → Enable.' : 'База не отвечает (' + ((_configError && _configError.code) || 'ошибка') + ') — отметки не сохранятся.';
+    document.body.appendChild(w);
   }
 }
 function crewDaysLabel(m) {
