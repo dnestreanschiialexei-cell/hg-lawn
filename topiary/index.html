@@ -747,7 +747,9 @@ const DIRECTION = 'topiary';
 let CUR = 'лей';
 let CREWS = ['1','2'];
 let COMPANY = null, DIRCFG = null;
-async function loadConfig() {
+async function loadConfig(attempt) {
+  attempt = attempt || 1;
+  _configError = null;
   try {
     const cs = await db.doc('companies/' + COMPANY_ID).get();
     if (cs.exists) { COMPANY = cs.data(); if (COMPANY.currency && COMPANY.currency.symbol) CUR = COMPANY.currency.symbol; }
@@ -767,7 +769,10 @@ async function loadConfig() {
     if (!CREWS.length) CREWS = ['1'];
     Object.keys(DEFAULT_BRIGADES).forEach(k => { if (!state.brigades[k]) state.brigades[k] = JSON.parse(JSON.stringify(DEFAULT_BRIGADES[k])); });
     rebuildClientsList();
-  } catch(e) { console.warn('config load', e); _configError = e; }
+  } catch(e) {
+    console.warn('config load', e); _configError = e;
+    if (e && e.code === 'permission-denied' && attempt < 3) { await new Promise(r => setTimeout(r, 1500)); try { if (!firebase.auth().currentUser) await firebase.auth().signInAnonymously(); } catch(_) {} return loadConfig(attempt + 1); }
+  }
   // Запасные данные — в любом случае, даже если база не ответила
   try {
     if (!ALL_CLIENTS.length && typeof FALLBACK !== 'undefined') {
@@ -791,7 +796,9 @@ async function loadConfig() {
   if (AUTH_MODE === 'none' || _configError) {
     const w = document.createElement('div');
     w.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:500;background:var(--rust);color:var(--bone);font-size:12px;padding:10px 14px;text-align:center;';
-    w.textContent = AUTH_MODE === 'none' ? 'Нет входа в базу — отметки не сохранятся. Владелец: Firebase → Authentication → Sign-in method → Anonymous → Enable.' : 'База не отвечает (' + ((_configError && _configError.code) || 'ошибка') + ') — отметки не сохранятся.';
+    const _u = firebase.auth().currentUser;
+    const _who = _u ? (_u.isAnonymous ? 'аноним ' : 'tg ') + String(_u.uid).slice(0, 6) : 'нет пользователя';
+    w.textContent = AUTH_MODE === 'none' ? 'Нет входа в базу — отметки не сохранятся. Владелец: Firebase → Authentication → Sign-in method → Anonymous → Enable.' : 'База не отвечает (' + ((_configError && _configError.code) || 'ошибка') + ' · вход: ' + _who + ' · ' + ((_configError && _configError.message) || '').slice(0, 80) + ') — отметки не сохранятся.';
     document.body.appendChild(w);
   }
 }
@@ -927,7 +934,7 @@ async function saveCloudState() {
       catch(e) { if (e && e.code === 'not-found') { const full = { updatedAt: firebase.firestore.FieldValue.serverTimestamp() }; SYNC_FIELDS.forEach(f => { full[f] = _clone(state[f]); }); await db.doc(SHARED_DOC).set(full); } else throw e; }
       Object.entries(sentF).forEach(([f, v]) => { _mirror[f] = v; });
     }
-  } catch(e) { console.warn('Cloud save failed', e); toast('⚠ Не удалось сохранить — повторю'); _pendingSave = true; }
+  } catch(e) { console.warn('Cloud save failed', e); toast(e && e.code === 'permission-denied' ? '⛔ База отказала в записи (permission-denied)' : '⚠ Не удалось сохранить — повторю'); if (!(e && e.code === 'permission-denied')) _pendingSave = true; }
   _saving = false;
   if (_pendingSave) { _pendingSave = false; scheduleCloudSave(); }
 }
