@@ -639,63 +639,50 @@ async function ensureAuth() {
 // PHOTO UPLOAD — compress + upload to Firebase Storage
 // ============================================================
 function compressImage(file, maxWidth, quality) {
+  // Сжатие с защитой: ошибка чтения или неизвестный формат → отдаём оригинал; зависание > 12 с → оригинал
   return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        let w = img.width, h = img.height;
-        if (w > maxWidth) { h = Math.round(h * maxWidth / w); w = maxWidth; }
-        canvas.width = w; canvas.height = h;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, w, h);
-        canvas.toBlob(resolve, 'image/jpeg', quality);
+    let done = false;
+    const finish = (blob) => { if (!done) { done = true; resolve(blob || file); } };
+    const timer = setTimeout(() => finish(file), 12000);
+    try {
+      const reader = new FileReader();
+      reader.onerror = () => { clearTimeout(timer); finish(file); };
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onerror = () => { clearTimeout(timer); finish(file); };
+        img.onload = () => {
+          try {
+            const canvas = document.createElement('canvas');
+            let w = img.width, h = img.height;
+            if (w > maxWidth) { h = Math.round(h * maxWidth / w); w = maxWidth; }
+            canvas.width = w; canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            canvas.toBlob((b) => { clearTimeout(timer); finish(b); }, 'image/jpeg', quality);
+          } catch(err) { clearTimeout(timer); finish(file); }
+        };
+        img.src = e.target.result;
       };
-      img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
+      reader.readAsDataURL(file);
+    } catch(err) { clearTimeout(timer); finish(file); }
   });
-}
-
-
-// Формирует читаемый путь для фото: photos/Имя Клиента/2026-07-28/before/1.jpg
-function translit(s) {
-  const map = {
-    'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','ё':'e','ж':'zh','з':'z','и':'i','й':'y',
-    'к':'k','л':'l','м':'m','н':'n','о':'o','п':'p','р':'r','с':'s','т':'t','у':'u','ф':'f',
-    'х':'h','ц':'c','ч':'ch','ш':'sh','щ':'sch','ъ':'','ы':'y','ь':'','э':'e','ю':'yu','я':'ya'
-  };
-  return String(s || '').toLowerCase().split('').map(ch => {
-    if (map[ch] !== undefined) return map[ch];
-    if (/[a-z0-9]/.test(ch)) return ch;
-    return '-';
-  }).join('').replace(/-+/g, '-').replace(/^-|-$/g, '');
-}
-
-// Формирует безопасный путь: photos/petr-koban/2026-07-28/do/1.jpg
-function buildMediaPath(kind, clientName, mediaType, idx) {
-  const d = new Date();
-  const dateStr = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-  const safeName = translit(clientName) || 'klient';
-  const folder = mediaType === 'video' ? 'videos' : 'photos';
-  const ext = mediaType === 'video' ? 'mp4' : 'jpg';
-  const kindPart = kind === 'before' ? 'do' : 'posle';
-  const stamp = Date.now();
-  return folder + '/' + safeName + '/' + dateStr + '/' + kindPart + '/' + idx + '-' + stamp + '.' + ext;
 }
 
 async function uploadPhoto(file, path) {
   try {
+    if (!firebase.auth().currentUser) { try { await firebase.auth().signInAnonymously(); } catch(e) {} }
     const compressed = await compressImage(file, 1200, 0.7);
     const ref = storage.ref().child(path);
-    const snap = await ref.put(compressed);
+    const task = ref.put(compressed, { contentType: compressed.type || 'image/jpeg' });
+    const snap = await new Promise((res, rej) => task.on('state_changed', null, rej, () => res(task.snapshot)));
     const url = await snap.ref.getDownloadURL();
     return url;
   } catch(e) {
     console.error('Upload failed:', e, 'path was:', path);
-    const msg = e && e.code ? ('Ошибка: ' + e.code) : 'Ошибка загрузки фото';
-    toast(msg);
+    const code = e && e.code ? String(e.code) : '';
+    const why = code === 'storage/unauthorized' ? 'хранилище фото закрыто правилами (Storage → Rules)' :
+                code === 'storage/retry-limit-exceeded' || code === 'storage/canceled' ? 'нет связи, попробуй ещё раз' :
+                code === 'storage/quota-exceeded' ? 'закончилось место в хранилище' : (code || 'неизвестная ошибка');
+    toast('⛔ Фото не загружено: ' + why);
     return null;
   }
 }
