@@ -545,6 +545,7 @@
     <button class="menu-item" onclick="openBrigadeEdit()"><span class="menu-icon">👥</span><span>Бригада · кто сегодня в смене</span><span class="menu-arrow">›</span></button>
     <button class="menu-item"><span class="menu-icon">📞</span><span>Связь с офисом</span><span class="menu-arrow">›</span></button>
     <button class="menu-item"><span class="menu-icon">⚙️</span><span>Настройки</span><span class="menu-arrow">›</span></button>
+    <button class="menu-item" onclick="runPhotoDiag()"><span class="menu-icon">🧪</span><span>Проверка загрузки фото</span><span class="menu-arrow">›</span></button>
     <button class="menu-item" onclick="openLangPicker()"><span class="menu-icon">🌐</span><span>Язык · Limba · Language</span><span class="menu-arrow">›</span></button>
     <div style="text-align:center;margin-top:20px;font-size:10px;letter-spacing:0.22em;color:var(--moss);opacity:0.5;">HEDERA · ТОПИАР · v5.0 · STAGE1</div>
   </div>
@@ -604,6 +605,7 @@ firebase.initializeApp({
 });
 const db = firebase.firestore();
 const storage = firebase.storage();
+try { storage.setMaxUploadRetryTime(45000); storage.setMaxOperationRetryTime(20000); } catch(e) {}
 const USERS_COL = 'topiary_users';
 const INVITES_COL = 'topiary_invites';
 const OFFICE_MSG_COL = 'topiary_office_messages';
@@ -667,22 +669,28 @@ function compressImage(file, maxWidth, quality) {
   });
 }
 
-async function uploadPhoto(file, path) {
+async function uploadPhoto(file, path, onProgress) {
   try {
     if (!firebase.auth().currentUser) { try { await firebase.auth().signInAnonymously(); } catch(e) {} }
+    if (onProgress) onProgress(-1, 'сжимаю');
     const compressed = await compressImage(file, 1200, 0.7);
+    if (onProgress) onProgress(0, 'отправляю');
     const ref = storage.ref().child('topiary/' + path);
     const task = ref.put(compressed, { contentType: compressed.type || 'image/jpeg' });
-    const snap = await new Promise((res, rej) => task.on('state_changed', null, rej, () => res(task.snapshot)));
+    const snap = await new Promise((res, rej) => task.on('state_changed',
+      (s) => { if (onProgress && s.totalBytes) onProgress(Math.round(s.bytesTransferred / s.totalBytes * 100), 'отправляю'); },
+      rej, () => res(task.snapshot)));
+    if (onProgress) onProgress(100, 'готово');
     const url = await snap.ref.getDownloadURL();
     return url;
   } catch(e) {
     console.error('Upload failed:', e, 'path was:', path);
     const code = e && e.code ? String(e.code) : '';
     const why = code === 'storage/unauthorized' ? 'хранилище фото закрыто правилами (Storage → Rules)' :
-                code === 'storage/retry-limit-exceeded' || code === 'storage/canceled' ? 'нет связи, попробуй ещё раз' :
-                code === 'storage/quota-exceeded' ? 'закончилось место в хранилище' : (code || 'неизвестная ошибка');
+                code === 'storage/retry-limit-exceeded' || code === 'storage/canceled' ? 'нет связи или сервер не отвечает — попробуй ещё раз' :
+                code === 'storage/quota-exceeded' ? 'закончилось место в хранилище' : (code || (e && e.message) || 'неизвестная ошибка');
     toast('⛔ Фото не загружено: ' + why);
+    if (onProgress) onProgress(null, why);
     return null;
   }
 }
@@ -1739,6 +1747,13 @@ function renderMediaCells(photos, video, kind){
   const cells = [];
   // Photos with real thumbnails
   photos.forEach((p, i) => {
+    if (p.uploading) {
+      cells.push(`<div class="media-cell has-photo" style="background:#2d5a3d;flex-direction:column;gap:2px;">
+        <span class="media-cell-icon" id="upl-${kind}-${i}" style="font-size:13px;font-family:'JetBrains Mono',monospace;">${p.progress === null ? '✕' : (p.progress < 0 ? '⏳' : p.progress + '%')}</span>
+        <span id="upl-l-${kind}-${i}" style="font-size:8px;opacity:0.7;letter-spacing:0.1em;text-transform:uppercase;">${p.label || ''}</span>
+      </div>`);
+      return;
+    }
     const thumb = p.url ? `background:url('${p.url}') center/cover;` : `background:#2d5a3d;`;
     cells.push(`
       <div class="media-cell has-photo" style="${thumb}" onclick="viewMedia('${kind}', 'photo', ${i})">
@@ -1776,18 +1791,23 @@ function addMedia(kind, type){
 
   if (type === 'photo') {
     createFileInput(async (file) => {
-      toast('📷 Загружаю фото...');
       const arr = kind === 'before' ? 'photosBefore' : 'photosAfter';
       vs[arr] = vs[arr] || [];
       const idx = vs[arr].length;
       const path = buildMediaPath(kind, clientRef.name, 'photo', idx + 1);
-      const url = await uploadPhoto(file, path);
-      if (url) {
-        vs[arr].push({ ts: Date.now(), url });
-        persist();
-        renderDetail(slotKey, clientRef, vs);
-        toast('✓ Фото сохранено');
-      }
+      const placeholder = { ts: Date.now(), uploading: true, progress: -1, label: 'сжимаю' };
+      vs[arr].push(placeholder);
+      renderDetail(slotKey, clientRef, vs);
+      const url = await uploadPhoto(file, path, (p, label) => {
+        placeholder.progress = p; placeholder.label = label;
+        const el = document.getElementById('upl-' + kind + '-' + idx);
+        if (el) el.textContent = p === null ? '✕' : (p < 0 ? '⏳' : p + '%');
+        const lb = document.getElementById('upl-l-' + kind + '-' + idx);
+        if (lb) lb.textContent = label || '';
+      });
+      const pos = vs[arr].indexOf(placeholder);
+      if (url) { vs[arr][pos] = { ts: Date.now(), url }; persist(); renderDetail(slotKey, clientRef, vs); toast('✓ Фото сохранено'); }
+      else { if (pos >= 0) vs[arr].splice(pos, 1); renderDetail(slotKey, clientRef, vs); }
     });
   } else {
     // Video — upload to storage too
@@ -3355,6 +3375,35 @@ async function setLang(l, save){
   if (save && tgUser) { try { await db.collection(USERS_COL).doc(tgUser.id).set({ lang: LANG }, { merge: true }); } catch(e) {} }
 }
 function openVoiceChat(){ try { Telegram.WebApp.openTelegramLink(BOT_LINK.replace(/\/[a-z]+$/, '')); } catch(e) { window.open('https://t.me/HgLawn_bot', '_blank'); } }
+async function runPhotoDiag(){
+  const lines = [];
+  const add = (ok, t) => { lines.push((ok === null ? '·' : ok ? '✓' : '✗') + ' ' + t); showModal('<div class="modal-h">🧪 Проверка фото</div><div style="font-family:JetBrains Mono,monospace;font-size:11px;line-height:1.7;white-space:pre-wrap;">' + lines.map(esc).join('\n') + '</div><div class="modal-actions"><button class="modal-btn secondary" onclick="closeModal()">Закрыть</button></div>'); };
+  const t0 = Date.now(); const ms = () => (Date.now() - t0) + ' мс';
+  try {
+    const u = firebase.auth().currentUser;
+    add(!!u, 'вход: ' + (u ? (u.isAnonymous ? 'аноним' : 'tg') + ' ' + String(u.uid).slice(0, 8) : 'нет пользователя'));
+    add(null, 'хранилище: ' + (storage.app.options.storageBucket || '?'));
+    add(null, 'сеть: ' + (navigator.onLine ? 'есть' : 'нет') + (navigator.connection && navigator.connection.effectiveType ? ' · ' + navigator.connection.effectiveType : ''));
+    // сжатие: рисуем тестовую картинку 1600×1200
+    const c = document.createElement('canvas'); c.width = 1600; c.height = 1200; const g = c.getContext('2d'); g.fillStyle = '#5d7a4f'; g.fillRect(0, 0, 1600, 1200); g.fillStyle = '#f5f1e8'; g.font = '80px sans-serif'; g.fillText('HEDERA TEST', 400, 600);
+    const big = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.92));
+    const small = await compressImage(new File([big], 'test.jpg', { type: 'image/jpeg' }), 1200, 0.7);
+    add(small && small.size < big.size, 'сжатие: ' + Math.round(big.size / 1024) + ' КБ → ' + Math.round((small ? small.size : 0) / 1024) + ' КБ · ' + ms());
+    // отправка 1 КБ
+    const ref = storage.ref().child('topiary/' + 'diag/' + (tgUser ? tgUser.id : 'anon') + '-' + Date.now() + '.txt');
+    const task = ref.put(new Blob(['hedera diag ' + new Date().toISOString()], { type: 'text/plain' }));
+    await new Promise((res, rej) => task.on('state_changed', null, rej, res));
+    add(true, 'отправка 1 КБ: ок · ' + ms());
+    const url = await ref.getDownloadURL();
+    add(!!url, 'ссылка на файл: ' + (url ? 'получена' : 'нет') + ' · ' + ms());
+    try { await ref.delete(); } catch(e) {}
+    add(true, 'ИТОГ: хранилище работает. Если фото всё равно висит — дело в самом снимке (формат/размер) или в связи на объекте.');
+  } catch(e) {
+    add(false, 'ошибка: ' + ((e && e.code) || '') + ' ' + ((e && e.message) || e) + ' · ' + ms());
+    if (e && e.code === 'storage/unauthorized') add(null, 'ИТОГ: Storage → Rules — правила не пускают. Нужно allow read, write: if request.auth != null');
+    if (e && (e.code === 'storage/retry-limit-exceeded' || e.code === 'storage/unknown')) add(null, 'ИТОГ: хранилище не отвечает — проверить Storage в Firebase (bucket, App Check, биллинг).');
+  }
+}
 function openLangPicker(){
   showModal(`<div class="modal-h">Язык · Limba · Language</div>
     <div style="display:flex;flex-direction:column;gap:6px;">
