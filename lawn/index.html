@@ -544,8 +544,8 @@
   <div class="body">
     <button class="menu-item" onclick="showScreen('fuel')"><span class="menu-icon">⛽</span><span>Бензин и заправки</span><span class="menu-arrow">›</span></button>
     <button class="menu-item" onclick="openBrigadeEdit()"><span class="menu-icon">👥</span><span>Бригада · кто сегодня в смене</span><span class="menu-arrow">›</span></button>
-    <button class="menu-item"><span class="menu-icon">📞</span><span>Связь с офисом</span><span class="menu-arrow">›</span></button>
-    <button class="menu-item"><span class="menu-icon">⚙️</span><span>Настройки</span><span class="menu-arrow">›</span></button>
+    <button class="menu-item" onclick="openBrigadeNote()"><span class="menu-icon">📞</span><span>Связь с офисом</span><span class="menu-arrow">›</span></button>
+    
     <button class="menu-item" onclick="runPhotoDiag()"><span class="menu-icon">🧪</span><span>Проверка загрузки фото</span><span class="menu-arrow">›</span></button>
     <button class="menu-item" onclick="openLangPicker()"><span class="menu-icon">🌐</span><span>Язык · Limba · Language</span><span class="menu-arrow">›</span></button>
     <div style="text-align:center;margin-top:20px;font-size:10px;letter-spacing:0.22em;color:var(--moss);opacity:0.5;">HEDERA · ГАЗОН · v5.0 · STAGE1</div>
@@ -1783,6 +1783,20 @@ function renderMediaCells(photos, video, kind){
   return cells.join('');
 }
 
+function videoDuration(file){
+  return new Promise(resolve => {
+    const v = document.createElement('video');
+    v.preload = 'metadata';
+    v.onloadedmetadata = () => {
+      URL.revokeObjectURL(v.src);
+      const s = Math.round(v.duration || 0);
+      resolve(Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'));
+    };
+    v.onerror = () => resolve('—');
+    v.src = URL.createObjectURL(file);
+  });
+}
+
 function addMedia(kind, type){
   if (!state.currentClient) return;
   const {slotKey, ref: clientRef} = state.currentClient;
@@ -1817,7 +1831,7 @@ function addMedia(kind, type){
         const ref = storage.ref().child(path);
         const snap = await ref.put(file);
         const url = await snap.ref.getDownloadURL();
-        vs[kind === 'before' ? 'videoBefore' : 'videoAfter'] = { duration: '0:' + Math.floor(file.size/100000), ts: Date.now(), url };
+        vs[kind === 'before' ? 'videoBefore' : 'videoAfter'] = { duration: await videoDuration(file), ts: Date.now(), url };
         persist();
         renderDetail(slotKey, clientRef, vs);
         toast('✓ Видео сохранено');
@@ -2249,7 +2263,7 @@ function renderDisp(){
       <div class="disp-machine">
         <div class="disp-machine-h">
           <div class="disp-machine-n">Машина ${m}</div>
-          <div class="disp-machine-status">${slot.clients.length} обj.</div>
+          <div class="disp-machine-status">${slot.clients.length} объ.</div>
         </div>
         <div style="margin-top:4px;font-size:11px;color:var(--forest-deep);">
           👤 ${b.driver} · ${b.helper}${b.helperUntil ? ' <span style="color:var(--rust);">до '+b.helperUntil+'</span>' : ''}
@@ -2909,8 +2923,7 @@ function confirmAddNew(){
   if (!price && !confirm('Цена не указана — объект будет считаться «требует расчёта» (0 в выручке). Добавить всё равно?')) return;
 
   // Unique n among extras
-  const existing = state.extras.filter(e => e.slot === _selectedAddSlot);
-  const n = 1000 + existing.length;
+  const n = Date.now() % 1000000000;
 
   state.extras.push({
     week: getViewingWeekId(),
