@@ -782,18 +782,7 @@ async function loadConfig(attempt) {
     console.warn('config load', e); _configError = e;
     if (e && e.code === 'permission-denied' && attempt < 3) { await new Promise(r => setTimeout(r, 1500)); try { if (!firebase.auth().currentUser) await firebase.auth().signInAnonymously(); } catch(_) {} return loadConfig(attempt + 1); }
   }
-  // Запасные данные — в любом случае, даже если база не ответила
-  try {
-    if (!ALL_CLIENTS.length && typeof FALLBACK !== 'undefined') {
-      ALL_CLIENTS = FALLBACK.clients; if (!Object.keys(DIRCFG && DIRCFG.brigades || {}).length) DEFAULT_BRIGADES = FALLBACK.brigades;
-      if (!(DIRCFG && DIRCFG.tasks && DIRCFG.tasks.length)) STD_TASKS = FALLBACK.tasks;
-      if (!(DIRCFG && DIRCFG.skipReasons && DIRCFG.skipReasons.length)) SKIP_REASONS = FALLBACK.skipReasons;
-      if (!(DIRCFG && DIRCFG.extraServices && Object.keys(DIRCFG.extraServices).length)) EXTRA_SERVICES = FALLBACK.extraServices;
-      CREWS = Object.keys(DEFAULT_BRIGADES).sort((a, b) => (+a) - (+b));
-      Object.keys(DEFAULT_BRIGADES).forEach(k => { if (!state.brigades[k] || !state.brigades[k].driver) state.brigades[k] = JSON.parse(JSON.stringify(DEFAULT_BRIGADES[k])); });
-    }
-    rebuildClientsList();
-  } catch(e) { console.warn('fallback', e); }
+  try { rebuildClientsList(); } catch(e) { console.warn('rebuild', e); }
   renderMachineButtons();
   const hasClients = Object.values(BASE_SCHEDULE).some(s => (s.clients || []).length) || (typeof ALL_CLIENTS !== 'undefined' && ALL_CLIENTS.length);
   if (!hasClients) {
