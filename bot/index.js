@@ -14,7 +14,7 @@ const BOT_TOKEN = process.env.BOT_TOKEN;
 const GEMINI_KEY = process.env.GEMINI_KEY;
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || '';
-const HUB_URL = process.env.HUB_URL || 'https://dnestreanschiialexei-cell.github.io/hg-lawn/';
+const HUB_URL = process.env.HUB_URL || 'https://hedera-lawn.web.app/';
 const TZ = 'Europe/Chisinau';
 const COMPANY_ID = 'hedera';
 const DAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
@@ -82,6 +82,7 @@ async function handleAuth(req, res) {
     if (!user || !user.id) { res.status(401).json({ error: 'bad_signature' }); return; }
     const tgId = String(user.id);
     const { roles, clientName } = await rolesFor(tgId);
+    if (Object.keys(roles).length === 0 && !clientName) { res.status(403).json({ error: 'no_role' }); return; }
     const claims = { tg: true, tgId, company: COMPANY_ID, roles };
     if (clientName) claims.clientName = clientName;
     const token = await admin.auth().createCustomToken('tg:' + tgId, claims);
