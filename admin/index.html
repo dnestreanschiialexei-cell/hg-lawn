@@ -108,176 +108,6 @@ const CURRENCIES = [ ['MDL','лей','Молдавский лей'], ['EUR','€
 const DIR_META = { lawn:{name:'Газон',icon:'🌿',unit:'m2'}, topiary:{name:'Топиар',icon:'✂️',unit:'people'}, care:{name:'Уход',icon:'🌳',unit:'people'}, build:{name:'Создание',icon:'🏗',unit:'project'} };
 
 // ---------- ГОТОВЫЕ ДАННЫЕ HEDERA (для кнопки «загрузить») ----------
-  company: { name:'Hedera Garden', currency:{code:'MDL',symbol:'лей'}, defaultLang:'ru', langs:['ru','ro','en'],
-    directions:{ lawn:{name:'Газон',active:true}, topiary:{name:'Топиар',active:true}, care:{name:'Уход',active:false}, build:{name:'Создание',active:false} } },
-  lawn: { schedule: {
-  'Пн-1': { label:'Пн-1', total_m2:908, total_time:4.8, clients:[
-    {n:1,name:'—',sector:'—',address:'—',m2:210,time_h:0.7,conditions:[{type:'time',text:'Начинать с неё. Быть около 9:00'}]},
-    {n:2,name:'—',sector:'—',address:'—',m2:100,time_h:0.7,conditions:[{type:'time',text:'ДО 13:00'},{type:'extra',text:'Подметать хвою с плитки, наводить порядок во дворе'}]},
-    {n:3,name:'—',sector:'—',address:'—',m2:150,time_h:1.0,conditions:[{type:'time',text:'Быть ДО 13:00'}]},
-    {n:4,name:'—',sector:'—',address:'—',m2:165,time_h:1.0,conditions:[]},
-    {n:5,name:'—',sector:'—',address:'—',m2:153,time_h:0.7,conditions:[{type:'warn',text:'ОБЯЗАТЕЛЬНО РАБОТАТЬ СО ЩИТОМ'},{type:'warn',text:'По плитам газонокосилку НЕ ВОЗИТЬ'},{type:'warn',text:'ВНИМАТЕЛЬНО — чтобы трава не попала в бассейн'}]},
-    {n:6,name:'—',sector:'—',address:'—',m2:130,time_h:0.7,conditions:[{type:'extra',text:'Убирать сорняки из клумб с камнем'}]},
-  ]},
-  'Пн-2': { label:'Пн-2', total_m2:845, total_time:3.7, clients:[
-    {n:1,name:'—',sector:'—',address:'—',m2:50,time_h:0.5,conditions:[{type:'time',text:'ПОСЛЕ 10:00'}]},
-    {n:2,name:'—',sector:'—',address:'—',m2:700,time_h:2.5,conditions:[{type:'extra',text:'REGATA EVENT SRL'}]},
-    {n:3,name:'—',sector:'—',address:'—',m2:95,time_h:0.7,conditions:[]},
-  ]},
-  'Вт-1': { label:'Вт-1', total_m2:1175, total_time:6.0, clients:[
-    {n:1,name:'—',sector:'—',address:'—',m2:650,time_h:2.5,conditions:[{type:'extra',text:'Вырывать сорняки ОБЯЗАТЕЛЬНО со всех клумб'}]},
-    {n:2,name:'—',sector:'—',address:'—',m2:345,time_h:2.5,conditions:[{type:'extra',text:'Убираем круглый год в независимости от погоды'},{type:'access',text:'КЛЮЧ В ОФИСЕ'}]},
-    {n:3,name:'—',sector:'—',address:'—',m2:180,time_h:1.0,conditions:[]},
-  ]},
-  'Вт-2': { label:'Вт-2', total_m2:849, total_time:6.1, clients:[
-    {n:1,name:'—',sector:'—',address:'—',m2:120,time_h:1.0,conditions:[]},
-    {n:2,name:'—',sector:'—',address:'—',m2:81,time_h:1.0,conditions:[{type:'extra',text:'Проверять сорняки на плитах'}]},
-    {n:3,name:'—',sector:'—',address:'—',m2:176,time_h:1.3,conditions:[]},
-    {n:4,name:'—',sector:'—',address:'—',m2:245,time_h:1.5,conditions:[{type:'access',text:'КЛЮЧ В ОФИСЕ'}]},
-    {n:5,name:'—',sector:'—',address:'—',m2:54,time_h:0.5,conditions:[{type:'contact',text:'Звонить за 30-60 мин до приезда: 0XXXXXXXXX'}]},
-    {n:6,name:'—',sector:'—',address:'—',m2:173,time_h:1.3,conditions:[]},
-  ]},
-  'Ср-1': { label:'Ср-1', total_m2:1000, total_time:4.6, clients:[
-    {n:1,name:'—',sector:'—',address:'—',m2:130,time_h:0.7,conditions:[{type:'freq',text:'РАЗ В 2 НЕДЕЛИ'},{type:'extra',text:'Аккуратно'}]},
-    {n:2,name:'—',sector:'—',address:'—',m2:400,time_h:1.7,conditions:[]},
-    {n:3,name:'—',sector:'—',address:'—',m2:90,time_h:0.7,conditions:[{type:'access',text:'КЛЮЧ В ОФИСЕ — офис открывает'}]},
-    {n:4,name:'—',sector:'—',address:'—',m2:380,time_h:1.5,conditions:[{type:'warn',text:'Использовать щит возле стеклянных поверхностей в зоне барбекю'},{type:'extra',text:'Протирать стекло, если запачкали травой'}]},
-  ]},
-  'Чт-1': { label:'Чт-1', total_m2:1044, total_time:6.6, clients:[
-    {n:1,name:'—',sector:'—',address:'—',m2:50,time_h:0.5,conditions:[]},
-    {n:2,name:'—',sector:'—',address:'—',m2:220,time_h:1.0,conditions:[]},
-    {n:3,name:'—',sector:'—',address:'—',m2:136,time_h:0.7,conditions:[{type:'contact',text:'Звонить жене Алене'}]},
-    {n:4,name:'—',sector:'—',address:'—',m2:50,time_h:1.5,conditions:[{type:'extra',text:'Между ёлок стричь через неделю, ножницами'}]},
-    {n:5,name:'—',sector:'—',address:'—',m2:160,time_h:0.7,conditions:[{type:'contact',text:'Предупреждать за 20-30 мин (телефон или Viber)'}]},
-    {n:6,name:'—',sector:'—',address:'—',m2:180,time_h:0.7,conditions:[{type:'extra',text:'Убирать сорняки с горки, одуванчики вырывать «отвёрткой»'}]},
-    {n:7,name:'—',sector:'—',address:'—',m2:143,time_h:0.8,conditions:[{type:'time',text:'В ЛЮБОЕ ВРЕМЯ'},{type:'extra',text:'+ Полив запустить'}]},
-    {n:8,name:'—',sector:'—',address:'—',m2:105,time_h:0.7,conditions:[{type:'warn',text:'Использовать щит ВСЕГДА'},{type:'warn',text:'АККУРАТНО — белая плитка на участке'}]},
-  ]},
-  'Чт-2': { label:'Чт-2', total_m2:2200, total_time:8.0, clients:[
-    {n:1,name:'—',sector:'—',address:'—',m2:2200,time_h:8.0,conditions:[{type:'extra',text:'Мыть фильтр раз в неделю'}]},
-  ]},
-  'Пт-1': { label:'Пт-1', total_m2:743, total_time:6.7, clients:[
-    {n:1,name:'—',sector:'Кишинев',address:'—',m2:155,time_h:3.0,conditions:[{type:'extra',text:'Проверять, убирать сорняки с клумб на террасе'},{type:'contact',text:'Сдавать работу Татьяне Администратору: 0XXXXXXXXX'}]},
-    {n:2,name:'—',sector:'—',address:'—',m2:23,time_h:0.5,conditions:[]},
-    {n:3,name:'—',sector:'—',address:'—',m2:265,time_h:1.5,conditions:[{type:'warn',text:'По периметру плитки стричь НЕ ТРИММЕРОМ — ножницами для овечек'},{type:'warn',text:'Горки НЕ ТРОГАЕМ'}]},
-    {n:4,name:'—',sector:'—',address:'—',m2:150,time_h:0.7,conditions:[]},
-    {n:5,name:'—',sector:'—',address:'—',m2:150,time_h:1.0,conditions:[{type:'contact',text:'Звонить с утра соседке Наталье, предупредить когда ожидать: 0XXXXXXXXX'},{type:'extra',text:'Во дворе убирать плитку вокруг дома, проверять сорняки'},{type:'warn',text:'ОБЯЗАТЕЛЬНО убрать мусор'}]},
-  ]},
-  'Пт-2': { label:'Пт-2', total_m2:952, total_time:6.2, clients:[
-    {n:1,name:'—',sector:'—',address:'—',m2:345,time_h:1.0,conditions:[{type:'extra',text:'Плитка + уборка'},{type:'access',text:'КЛЮЧ В ОФИСЕ'}]},
-    {n:2,name:'—',sector:'—',address:'—',m2:110,time_h:1.0,conditions:[]},
-    {n:3,name:'—',sector:'—',address:'—',m2:772,time_h:3.5,conditions:[{type:'time',text:'ДО 17:00'},{type:'warn',text:'Приезжать с распечатанным актом запланированных работ'},{type:'extra',text:'Сдавать работу Администраторам по акту'}]},
-    {n:4,name:'—',sector:'—',address:'—',m2:70,time_h:0.7,conditions:[]},
-  ]},
-  'Сб-1': { label:'Сб-1', total_m2:1096, total_time:4.5, clients:[
-    {n:1,name:'—',sector:'—',address:'—',m2:816,time_h:3.5,conditions:[]},
-    {n:2,name:'—',sector:'—',address:'—',m2:280,time_h:1.0,conditions:[{type:'freq',text:'1 РАЗ В 2 НЕДЕЛИ'},{type:'time',text:'В 8:00'}]},
-  ]},
-}, prices: {
-  // Пн-1
-  'Пн-1_1':450,'Пн-1_2':500,'Пн-1_3':650,'Пн-1_4':580,'Пн-1_5':550,'Пн-1_6':430,
-  // Пн-2
-  'Пн-2_1':400,'Пн-2_2':1200,'Пн-2_3':450,
-  // Вт-1
-  'Вт-1_1':1260,'Вт-1_2':1190,'Вт-1_3':580,
-  // Вт-2
-  'Вт-2_1':470,'Вт-2_2':500,'Вт-2_3':600,'Вт-2_4':700,'Вт-2_5':400,'Вт-2_6':480,
-  // Ср-1
-  'Ср-1_1':520,'Ср-1_2':1100,'Ср-1_3':460,'Ср-1_4':740,
-  // Чт-1
-  'Чт-1_1':400,'Чт-1_2':620,'Чт-1_3':480,'Чт-1_4':650,'Чт-1_5':550,'Чт-1_6':500,'Чт-1_7':620,'Чт-1_8':650,
-  // Чт-2
-  'Чт-2_1':3850,
-  // Пт-1
-  'Пт-1_1':900,'Пт-1_2':400,'Пт-1_3':700,'Пт-1_4':500,'Пт-1_5':822,
-  // Пт-2
-  'Пт-2_1':1100,'Пт-2_2':500,'Пт-2_3':1450,'Пт-2_4':358,
-  // Сб-1
-  'Сб-1_1':1750,'Сб-1_2':600,
-}, tasks: ['Укос газона','Тримминг краёв и углов','Сдув с дорожек и плитки','Сбор мусора и мешки в машину'], extraServices: {
-  scarif:  { id:'scarif',  label:'Скарификация',         short:'Скариф.',    icon:'🌱', color:'#5d7a4f', unitLabel:'',              pricePer100m2: 250 },
-  fert:    { id:'fert',    label:'Подкормка',            short:'Подкормка',  icon:'💊', color:'#3d6b85', unitLabel:'кг удобрения',  pricePer100m2: 180 },
-  treat:   { id:'treat',   label:'Обработка от грибка/насекомых', short:'Обработка', icon:'🛡', color:'#9c4528', unitLabel:'л препарата', pricePer100m2: 220 },
-  karcher: { id:'karcher', label:'Мытьё двора Кёрхером', short:'Кёрхер',     icon:'🧼', color:'#3d6b85', unitLabel:'',              pricePer100m2: 200 },
-  cleanup: { id:'cleanup', label:'Уборка двора (плитка)', short:'Уборка',    icon:'🧹', color:'#8aa388', unitLabel:'',              pricePer100m2: 120 },
-}, skipReasons: [
-  { id:'no_client',  label:'Клиента нет дома' },
-  { id:'no_access',  label:'Нет доступа на участок' },
-  { id:'not_needed', label:'Клиент сказал не нужно' },
-  { id:'rain',       label:'Дождь / погода' },
-  { id:'broken',     label:'Поломка оборудования' },
-  { id:'other',      label:'Другое (написать)' },
-], brigades: {
-  '1': { —', —', helperUntil: null },
-  '2': { —', —', helperUntil: null },
-}, unit:'m2' },
-  topiary: { schedule: {
-  'Пн-1': { label:'Пн-1', clients:[] },
-  'Вт-1': { label:'Вт-1', clients:[] },
-  'Ср-1': { label:'Ср-1', clients:[] },
-  'Чт-1': { label:'Чт-1', clients:[] },
-  'Пт-1': { label:'Пт-1', clients:[] },
-  'Сб-1': { label:'Сб-1', clients:[] },
-}, prices: {}, clients: [
-  {name:'—', sector:'—', address:'—'},
-  {name:'—', sector:'—', address:'—'},
-  {name:'—', sector:'—', address:'—'},
-  {name:'—', sector:'—', address:'—'},
-  {name:'—', sector:'—', address:'—'},
-  {name:'—', sector:'—', address:'—'},
-  {name:'—', sector:'—', address:'—'},
-  {name:'—', sector:'—', address:'—'},
-  {name:'—', sector:'—', address:'—'},
-  {name:'—', sector:'—', address:'—'},
-  {name:'—', sector:'—', address:'—'},
-  {name:'—', sector:'—', address:'—'},
-  {name:'—', sector:'—', address:'—'},
-  {name:'—', sector:'—', address:'—'},
-  {name:'—', sector:'—', address:'—'},
-  {name:'—', sector:'—', address:'—'},
-  {name:'—', sector:'—', address:'—'},
-  {name:'—', sector:'—', address:'—'},
-  {name:'—', sector:'—', address:'—'},
-  {name:'—', sector:'—', address:'—'},
-  {name:'—', sector:'—', address:'—'},
-  {name:'—', sector:'—', address:'—'},
-  {name:'—', sector:'—', address:'—'},
-  {name:'—', sector:'—', address:'—'},
-  {name:'—', sector:'—', address:'—'},
-  {name:'—', sector:'—', address:'—'},
-  {name:'—', sector:'—', address:'—'},
-  {name:'—', sector:'—', address:'—'},
-  {name:'—', sector:'—', address:'—'},
-  {name:'—', sector:'—', address:'—'},
-  {name:'—', sector:'—', address:'—'},
-  {name:'—', sector:'Кишинев', address:'—'},
-  {name:'—', sector:'—', address:'—'},
-  {name:'—', sector:'—', address:'—'},
-  {name:'—', sector:'—', address:'—'},
-  {name:'—', sector:'—', address:'—'},
-  {name:'—', sector:'—', address:'—'},
-  {name:'—', sector:'—', address:'—'},
-  {name:'—', sector:'—', address:'—'},
-  {name:'—', sector:'—', address:'—'},
-  {name:'—', sector:'—', address:'—'},
-], tasks: ['Стрижка/формовка','Уборка срезанного','Сдув территории','Вывоз мусора'], extraServices: {
-  shape:   { id:'shape',   label:'Фигурная стрижка',     short:'Фигура',   icon:'✂️', color:'#c45e3a', unitLabel:'',              pricePer100m2: 0 },
-  form:    { id:'form',    label:'Формовка кустов',      short:'Формовка', icon:'🌳', color:'#5d7a4f', unitLabel:'',              pricePer100m2: 0 },
-  treat:   { id:'treat',   label:'Обработка от вредителей', short:'Обработка', icon:'🛡', color:'#9c4528', unitLabel:'л препарата', pricePer100m2: 0 },
-  fert:    { id:'fert',    label:'Подкормка',            short:'Подкормка',icon:'💊', color:'#3d6b85', unitLabel:'кг удобрения',  pricePer100m2: 0 },
-  cleanup: { id:'cleanup', label:'Уборка территории',    short:'Уборка',   icon:'🧹', color:'#8aa388', unitLabel:'',              pricePer100m2: 0 },
-}, skipReasons: [
-  { id:'no_client',  label:'Клиента нет дома' },
-  { id:'no_access',  label:'Нет доступа на участок' },
-  { id:'not_needed', label:'Клиент сказал не нужно' },
-  { id:'rain',       label:'Дождь / погода' },
-  { id:'broken',     label:'Поломка оборудования' },
-  { id:'other',      label:'Другое (написать)' },
-], brigades: {
-  '1': { —', —', helperUntil: null },
-  '2': { —', —', helperUntil: null },
-}, unit:'people' },
-};
 
 let tgUser = null;
 try { if (window.Telegram && Telegram.WebApp) { Telegram.WebApp.ready(); Telegram.WebApp.expand(); const u = Telegram.WebApp.initDataUnsafe?.user; if (u && u.id) tgUser = { id:String(u.id), name:((u.first_name||'')+' '+(u.last_name||'')).trim() }; } } catch(e) {}
@@ -357,15 +187,9 @@ function recomputeTotals(d) {
     slot.total_time = +((slot.clients||[]).reduce((s,c)=>s+(+c.time_h||0),0)).toFixed(1);
   });
 }
-function seedHedera() {
-  if (company && !confirm('Заменить текущие настройки данными Hedera Garden (41 клиент, 2 машины)? Несохранённые правки пропадут.')) return;
-  company = clone(SEED.company);
-  dirs = { lawn: clone(SEED.lawn), topiary: clone(SEED.topiary) };
-  markDirty(); render(); toast('Данные Hedera загружены — нажми «Сохранить»');
-}
 function newCompany() {
   company = { name:'Моя компания', currency:{code:'MDL',symbol:'лей'}, defaultLang:'ru', langs:['ru','ro','en'], directions:{ lawn:{name:'Газон',active:true}, topiary:{name:'Топиар',active:false}, care:{name:'Уход',active:false}, build:{name:'Создание',active:false} } };
-  dirs = { lawn: { schedule:{}, prices:{}, tasks:['Задача 1','Задача 2'], extraServices:{}, skipReasons: clone(SEED.lawn.skipReasons), brigades:{ '1':{driver:'',helper:'',helperUntil:null} }, unit:'m2' } };
+  dirs = { lawn: { schedule:{}, prices:{}, tasks:['Задача 1','Задача 2'], extraServices:{}, skipReasons: [{"id":"no_client","label":"Клиента нет дома"},{"id":"no_access","label":"Нет доступа на участок"},{"id":"not_needed","label":"Клиент сказал не нужно"},{"id":"rain","label":"Дождь / погода"},{"id":"broken","label":"Поломка оборудования"},{"id":"other","label":"Другое (написать)"}], brigades:{ '1':{driver:'',helper:'',helperUntil:null} }, unit:'m2' } };
   markDirty(); render();
 }
 
@@ -378,7 +202,7 @@ function render() {
   if (!company) {
     body.innerHTML = `<div class="card"><h3>Компания ещё не настроена</h3>
       <div class="hint">Данные пока берутся из кода приложений. Нажми кнопку — и все 41 клиент, цены, бригады и чек-листы переедут в базу. После этого править их можно здесь.</div>
-      <button class="btn p w" onclick="seedHedera()">Загрузить данные Hedera Garden</button>
+      
       <div style="height:8px"></div>
       <button class="btn s w" onclick="newCompany()">Начать с пустой компании</button></div>`;
     return;
@@ -390,7 +214,7 @@ function render() {
 }
 function ensureDir(id) {
   if (!company.directions[id] || !company.directions[id].active) { const first = Object.entries(company.directions).find(([,v])=>v.active); if (first) curDir = first[0]; id = curDir; }
-  if (!dirs[id]) dirs[id] = { schedule:{}, prices:{}, tasks:[], extraServices:{}, skipReasons: clone(SEED.lawn.skipReasons), brigades:{ '1':{driver:'',helper:'',helperUntil:null} }, unit:(DIR_META[id]||{}).unit||'m2' };
+  if (!dirs[id]) dirs[id] = { schedule:{}, prices:{}, tasks:[], extraServices:{}, skipReasons: [{"id":"no_client","label":"Клиента нет дома"},{"id":"no_access","label":"Нет доступа на участок"},{"id":"not_needed","label":"Клиент сказал не нужно"},{"id":"rain","label":"Дождь / погода"},{"id":"broken","label":"Поломка оборудования"},{"id":"other","label":"Другое (написать)"}], brigades:{ '1':{driver:'',helper:'',helperUntil:null} }, unit:(DIR_META[id]||{}).unit||'m2' };
 }
 function renderCompany() {
   const c = company;
@@ -419,7 +243,7 @@ function renderCompany() {
     <div class="kv"><span>Идентификатор компании</span><b>${COMPANY_ID}</b></div>
     <div class="kv"><span>Направлений с данными</span><b>${Object.keys(dirs).length}</b></div>
     <div style="height:10px"></div>
-    <button class="btn d w" onclick="seedHedera()">Перезаписать данными Hedera Garden</button>
+    
   </div>`;
 }
 function flatClients(d) {
