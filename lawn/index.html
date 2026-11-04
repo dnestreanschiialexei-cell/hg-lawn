@@ -905,6 +905,29 @@ async function migrateLegacyVisits() {
 function scheduleCloudSave() { clearTimeout(_saveTimer); _saveTimer = setTimeout(saveCloudState, 600); }
 
 // ---- запись: изменённые выезды — отдельными документами; списки — точечно в общий документ ----
+// Helpers for the client history: which client a visit belongs to, and its calendar date.
+const DAY_IDX = { 'Пн': 0, 'Вт': 1, 'Ср': 2, 'Чт': 3, 'Пт': 4, 'Сб': 5 };
+function visitClientName(k) {
+  const isExtra = k.startsWith('extra_');
+  const body = isExtra ? k.slice(6) : k;
+  const i = body.lastIndexOf('_');
+  if (i < 0) return '';
+  const slot = body.slice(0, i), n = Number(body.slice(i + 1));
+  if (isExtra) { const e = (state.extras || []).find(x => x.slot === slot && x.n === n); return e ? e.name : ''; }
+  const c = ((BASE_SCHEDULE[slot] || {}).clients || []).find(x => x.n === n);
+  return c ? c.name : '';
+}
+function visitDateIso(w, k) {
+  const body = k.startsWith('extra_') ? k.slice(6) : k;
+  const dayIdx = DAY_IDX[body.split('-')[0]];
+  const mon = isoWeekMonday(w);
+  if (dayIdx === undefined || !mon) return '';
+  const d = new Date(mon); d.setDate(d.getDate() + dayIdx);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function visitMeta(w, k) { return { clientName: visitClientName(k), date: visitDateIso(w, k) }; }
+function fmtDay(iso) { const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? m[3] + '.' + m[2] + '.' + m[1] : (iso || ''); }
+
 async function saveCloudState() {
   if (_saving || !_cloudReady) { _pendingSave = true; return; }
   _saving = true;
@@ -917,7 +940,7 @@ async function saveCloudState() {
         if (mir === undefined && _blankVisit(v)) return;           // пустые заготовки не пишем
         if (_same(v, mir)) return;
         const snap = _clone(v);
-        batch.set(db.collection(VISITS_COL).doc(_visitDocId(w, k)), Object.assign({}, snap, { week: w, visitKey: k, slotKey: k.replace(/^extra_/, '').split('_')[0], updatedAt: firebase.firestore.FieldValue.serverTimestamp(), updatedBy: tgUser ? tgUser.id : null }), { merge: true });
+        batch.set(db.collection(VISITS_COL).doc(_visitDocId(w, k)), Object.assign({}, snap, visitMeta(w, k), { week: w, visitKey: k, slotKey: k.replace(/^extra_/, '').split('_')[0], updatedAt: firebase.firestore.FieldValue.serverTimestamp(), updatedBy: tgUser ? tgUser.id : null }), { merge: true });
         sentV.push([w, k, snap]); n++;
       });
     });
@@ -939,6 +962,8 @@ async function saveCloudState() {
 
 // Живые обновления общего документа
 function listenCloudState() {
+  // Once per device: add client name and date to visits saved before this change.
+  setTimeout(() => backfillVisitMeta().catch(e => console.warn('visit meta backfill', e)), 6000);
   db.doc(SHARED_DOC).onSnapshot(doc => {
     if (!doc.exists) return;
     if (doc.metadata && doc.metadata.hasPendingWrites) return;
@@ -3082,17 +3107,37 @@ async function renderClientCabinet(clientName) {
   document.getElementById('client-body').innerHTML = html;
 
   // Async load history
-  const entries = await loadClientHistory(clientName, 12);
+  const entries = await loadClientHistory(clientName, 400);
   const histEl = document.getElementById('client-history-list');
   if (histEl) {
     if (entries.length > 0) {
-      histEl.innerHTML = renderHistoryEntries(entries, true);
+      histEl.innerHTML = renderHistoryByMonth(entries);
       histEl.style.textAlign = 'left';
       histEl.style.padding = '0';
     } else {
       histEl.innerHTML = 'Пока нет записей. Они появятся после первого визита.';
     }
   }
+}
+
+const MONTHS_RU = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
+function renderHistoryByMonth(entries) {
+  const groups = {};
+  entries.forEach(h => { const key = String(h.date || '').slice(0, 7) || 'без даты'; (groups[key] = groups[key] || []).push(h); });
+  const keys = Object.keys(groups).sort().reverse();
+  const title = key => { const m = /^(\d{4})-(\d{2})$/.exec(key); if (!m) return key; const name = MONTHS_RU[+m[2] - 1]; return name.charAt(0).toUpperCase() + name.slice(1) + ' ' + m[1]; };
+  return keys.map((key, i) => {
+    const list = groups[key];
+    const done = list.filter(h => h.status === 'done').length;
+    const photos = list.reduce((s, h) => s + (h.photosBefore || []).length + (h.photosAfter || []).length, 0);
+    return `<details ${i === 0 ? 'open' : ''} style="margin-bottom:10px;background:var(--cream);border-radius:14px;padding:10px 12px;">
+      <summary style="cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:baseline;gap:8px;">
+        <span style="font-family:'Fraunces',serif;font-size:17px;color:var(--forest-deep);">${title(key)}</span>
+        <span style="font-size:11px;color:var(--moss);">${list.length} виз. · ${done} готово · ${photos} фото</span>
+      </summary>
+      <div style="margin-top:10px;">${renderHistoryEntries(list, true)}</div>
+    </details>`;
+  }).join('');
 }
 
 function clientOrderWork() {
@@ -3123,18 +3168,30 @@ async function clientSubmitMsg() {
   closeModal(); toast('✓ Сообщение отправлено!');
 }
 
+async function backfillVisitMeta() {
+  if (localStorage.getItem('hedera_visit_meta_v1')) return;
+  const todo = [];
+  Object.entries(state.weekVisits || {}).forEach(([w, visits]) => Object.entries(visits || {}).forEach(([k, v]) => { if (!_blankVisit(v)) todo.push([w, k]); }));
+  for (let i = 0; i < todo.length; i += 400) {
+    const batch = db.batch();
+    todo.slice(i, i + 400).forEach(([w, k]) => batch.set(db.collection(VISITS_COL).doc(_visitDocId(w, k)), visitMeta(w, k), { merge: true }));
+    await batch.commit();
+  }
+  localStorage.setItem('hedera_visit_meta_v1', '1');
+}
+
 async function loadClientHistory(clientName, limit) {
   const entries = [];
   const norm = (v) => ({ clientName: v.clientName, slotKey: v.slotKey, date: v.date || '', week: v.week, status: v.status, m2: v.m2 || 0,
-    tasksTotal: v.tasksTotal || (v.tasksDone || []).length, tasksDone: Array.isArray(v.tasksDone) ? v.tasksDone.filter(Boolean).length : (v.tasksDone || 0),
+    tasksTotal: v.tasksTotal || (v.tasksDone || []).length, doneTasks: Array.isArray(v.tasksDone) ? v.tasksDone.map((d, i) => (d ? (STD_TASKS[i] || '') : null)).filter(Boolean) : [], tasksDone: Array.isArray(v.tasksDone) ? v.tasksDone.filter(Boolean).length : (v.tasksDone || 0),
     photosBefore: (v.photosBefore || []).map(p => p.url || p).filter(Boolean), photosAfter: (v.photosAfter || []).map(p => p.url || p).filter(Boolean),
     rating: v.rating || null, ratingText: v.ratingText || '', note: v.note || '', elapsed: v.elapsed || 0, skipReason: v.skipReasonLabel || v.skipReason || '', skipComment: v.skipComment || '', ts: v.updatedAt || v.ts });
   try {
-    const snap = await db.collection(VISITS_COL).where('clientName', '==', clientName).limit(120).get();
+    const snap = await db.collection(VISITS_COL).where('clientName', '==', clientName).limit(500).get();
     snap.forEach(d => { const v = d.data(); if (v.status === 'done' || v.status === 'skip') entries.push(norm(v)); });
   } catch(e) { console.warn('visits history', e); }
   try {
-    const old = await db.collection('history').where('clientName', '==', clientName).limit(80).get();
+    const old = await db.collection('history').where('clientName', '==', clientName).limit(500).get();
     old.forEach(d => { const v = d.data(); if (!entries.find(x => x.date === v.date && x.slotKey === v.slotKey)) entries.push(norm(v)); });
   } catch(e) {}
   entries.sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
@@ -3149,12 +3206,13 @@ function renderHistoryEntries(entries, forClient) {
     return `
       <div style="background:var(--cream);border-radius:12px;padding:12px;margin-bottom:8px;">
         <div style="display:flex;justify-content:space-between;align-items:baseline;">
-          <div style="font-family:'Fraunces',serif;font-size:15px;color:var(--forest-deep);">${h.date}</div>
+          <div style="font-family:'Fraunces',serif;font-size:15px;color:var(--forest-deep);">${fmtDay(h.date)}</div>
           <div style="font-size:10px;padding:3px 8px;border-radius:8px;font-weight:600;letter-spacing:0.08em;background:${h.status==='done'?'var(--forest)':'var(--rust)'};color:var(--bone);">${statusLabel}</div>
         </div>
         ${h.status === 'done' ? `<div style="font-size:11px;color:var(--moss);margin-top:4px;">
           ${h.m2} м² · ${Math.round(h.elapsed/60)} мин · задачи ${h.tasksDone}/${h.tasksTotal}
         </div>` : ''}
+        ${(h.doneTasks || []).length ? `<div style="font-size:11px;color:var(--forest-deep);margin-top:4px;">✔ ${(h.doneTasks || []).map(t => esc(t)).join(' · ')}</div>` : ''}
         ${h.status === 'skip' && h.skipComment && !forClient ? `<div style="font-size:11px;color:var(--rust);margin-top:4px;">${esc(h.skipComment)}</div>` : ''}
         ${h.note && !forClient ? `<div style="font-size:11px;color:var(--forest-deep);margin-top:4px;font-style:italic;">📝 ${esc(h.note)}</div>` : ''}
         ${allPhotos.length > 0 ? `<div style="display:flex;gap:5px;margin-top:8px;overflow-x:auto;">
