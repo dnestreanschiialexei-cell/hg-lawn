@@ -3169,15 +3169,17 @@ async function clientSubmitMsg() {
 }
 
 async function backfillVisitMeta() {
-  if (localStorage.getItem('hedera_visit_meta_v1')) return;
+  // Reads every visit document from the database (not just the loaded week), once per device.
+  if (localStorage.getItem('hedera_visit_meta_v2')) return;
+  const snap = await db.collection(VISITS_COL).get();
   const todo = [];
-  Object.entries(state.weekVisits || {}).forEach(([w, visits]) => Object.entries(visits || {}).forEach(([k, v]) => { if (!_blankVisit(v)) todo.push([w, k]); }));
+  snap.forEach(d => { const v = d.data(); if (!v.clientName && v.week && v.visitKey) todo.push([v.week, v.visitKey, d.ref]); });
   for (let i = 0; i < todo.length; i += 400) {
     const batch = db.batch();
-    todo.slice(i, i + 400).forEach(([w, k]) => batch.set(db.collection(VISITS_COL).doc(_visitDocId(w, k)), visitMeta(w, k), { merge: true }));
+    todo.slice(i, i + 400).forEach(([w, k, ref]) => batch.set(ref, visitMeta(w, k), { merge: true }));
     await batch.commit();
   }
-  localStorage.setItem('hedera_visit_meta_v1', '1');
+  localStorage.setItem('hedera_visit_meta_v2', '1');
 }
 
 async function loadClientHistory(clientName, limit) {
