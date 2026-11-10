@@ -828,7 +828,7 @@ function _same(a, b){ return JSON.stringify(a === undefined ? null : a) === JSON
 function _blankVisit(v){
   if (!v) return true;
   return (!v.status || v.status === 'planned') && !(v.tasksDone || []).some(Boolean) && !(v.photosBefore || []).length && !(v.photosAfter || []).length
-    && !v.videoBefore && !v.videoAfter && !v.note && !v.rating && !v.timerStart && !(v.elapsed > 0) && !v.extras && !v.customExtras && !v.issue;
+    && !v.videoBefore && !v.videoAfter && !(v.videosBefore || []).length && !(v.videosAfter || []).length && !v.note && !v.rating && !v.timerStart && !(v.elapsed > 0) && !v.extras && !v.customExtras && !v.issue;
 }
 function _visitDocId(week, key){ return (week + '__' + key).replace(/\//g, '-'); }
 
@@ -1659,20 +1659,20 @@ function renderDetail(slotKey, c, vs){
       <div class="media-section">
         <div class="media-label">
           <span class="media-label-l">До работы</span>
-          <span class="media-label-c">${(vs.photosBefore || []).length}/5 фото · ${vs.videoBefore ? '1' : '0'}/1 видео</span>
+          <span class="media-label-c">${(vs.photosBefore || []).length}/${PHOTO_MAX} фото · ${videosOf(vs, 'before').length}/${VIDEO_MAX} видео</span>
         </div>
         <div class="media-grid">
-          ${renderMediaCells(vs.photosBefore || [], vs.videoBefore, 'before')}
+          ${renderMediaCells(vs.photosBefore || [], videosOf(vs, 'before'), 'before')}
         </div>
       </div>
 
       <div class="media-section">
         <div class="media-label">
           <span class="media-label-l">После работы</span>
-          <span class="media-label-c">${(vs.photosAfter || []).length}/5 фото · ${vs.videoAfter ? '1' : '0'}/1 видео</span>
+          <span class="media-label-c">${(vs.photosAfter || []).length}/${PHOTO_MAX} фото · ${videosOf(vs, 'after').length}/${VIDEO_MAX} видео</span>
         </div>
         <div class="media-grid">
-          ${renderMediaCells(vs.photosAfter || [], vs.videoAfter, 'after')}
+          ${renderMediaCells(vs.photosAfter || [], videosOf(vs, 'after'), 'after')}
         </div>
       </div>
     </div>
@@ -1755,7 +1755,24 @@ function renderDetail(slotKey, c, vs){
   `;
 }
 
-function renderMediaCells(photos, video, kind){
+const PHOTO_MAX = 10;
+const VIDEO_MAX = 2;
+// Videos per side are a list; older visits kept a single video object, which still reads correctly.
+function videosOf(vs, k){ const K = k === 'before' ? 'Before' : 'After'; return vs['videos' + K] || (vs['video' + K] ? [vs['video' + K]] : []); }
+function mediaItemsFor(vs){
+  const items = [];
+  ['before', 'after'].forEach(k => {
+    const word = k === 'before' ? 'ДО' : 'ПОСЛЕ';
+    (vs[k === 'before' ? 'photosBefore' : 'photosAfter'] || []).forEach((p, i) => {
+      if (p.url) items.push({ kind: k, type: 'photo', idx: i, url: p.url, isVideo: false, label: word + ' · фото ' + (i + 1) + (p.caption ? ' — ' + esc(p.caption) : '') });
+    });
+    videosOf(vs, k).forEach((v, i) => {
+      if (v.url) items.push({ kind: k, type: 'video', idx: i, url: v.url, isVideo: true, label: word + ' · видео ' + (i + 1) + (v.caption ? ' — ' + esc(v.caption) : '') });
+    });
+  });
+  return items;
+}
+function renderMediaCells(photos, videos, kind){
   const cells = [];
   // Photos with real thumbnails
   photos.forEach((p, i) => {
@@ -1771,26 +1788,28 @@ function renderMediaCells(photos, video, kind){
       <div class="media-cell has-photo" style="${thumb}" onclick="viewMedia('${kind}', 'photo', ${i})">
         ${!p.url ? '<span class="media-cell-icon">📸</span>' : ''}
         <span class="media-cell-num">${i+1}</span>
+        <span class="media-cell-edit" onclick="event.stopPropagation();editCaption('${kind}','photo',${i})">✎</span>
         <span class="media-cell-del" onclick="event.stopPropagation();removeMedia('${kind}','photo',${i})">×</span>
       </div>`);
   });
-  // Video
-  if (video){
+  // Videos
+  videos.forEach((video, i) => {
     const vThumb = video.url ? `background:linear-gradient(rgba(0,0,0,0.3),rgba(0,0,0,0.5)),url('${video.url}') center/cover;` : '';
     cells.push(`
-      <div class="media-cell has-video" style="${vThumb}" onclick="viewMedia('${kind}', 'video', 0)">
+      <div class="media-cell has-video" style="${vThumb}" onclick="viewMedia('${kind}', 'video', ${i})">
         <span class="media-cell-icon">▶</span>
-        <span class="media-cell-num">VIDEO</span>
+        <span class="media-cell-num">VIDEO ${i + 1}</span>
         <span class="media-cell-time">${video.duration || '0:15'}</span>
-        <span class="media-cell-del" onclick="event.stopPropagation();removeMedia('${kind}','video',0)">×</span>
+        <span class="media-cell-edit" onclick="event.stopPropagation();editCaption('${kind}','video',${i})">✎</span>
+        <span class="media-cell-del" onclick="event.stopPropagation();removeMedia('${kind}','video',${i})">×</span>
       </div>`);
-  }
+  });
   // Add photo button
-  if (photos.length < 5){
+  if (photos.length < PHOTO_MAX){
     cells.push(`<button class="media-cell empty" onclick="addMedia('${kind}','photo')"><span class="media-cell-icon">📷</span></button>`);
   }
   // Add video button
-  if (!video){
+  if (videos.length < VIDEO_MAX){
     cells.push(`<button class="media-cell empty" onclick="addMedia('${kind}','video')" style="color:var(--terra);border-color:var(--terra);"><span class="media-cell-icon">🎥</span></button>`);
   }
   return cells.join('');
@@ -1844,7 +1863,9 @@ function addMedia(kind, type){
         const ref = storage.ref().child(path);
         const snap = await ref.put(file);
         const url = await snap.ref.getDownloadURL();
-        vs[kind === 'before' ? 'videoBefore' : 'videoAfter'] = { duration: await videoDuration(file), ts: Date.now(), url };
+        const list = videosOf(vs, kind);
+        list.push({ duration: await videoDuration(file), ts: Date.now(), url });
+        vs[kind === 'before' ? 'videosBefore' : 'videosAfter'] = list;
         persist();
         renderDetail(slotKey, clientRef, vs);
         toast('✓ Видео сохранено');
@@ -1862,6 +1883,9 @@ function removeMedia(kind, type, idx){
     const arr = vs[kind === 'before' ? 'photosBefore' : 'photosAfter'];
     arr.splice(idx, 1);
   } else {
+    const list = videosOf(vs, kind);
+    list.splice(idx, 1);
+    vs[kind === 'before' ? 'videosBefore' : 'videosAfter'] = list;
     vs[kind === 'before' ? 'videoBefore' : 'videoAfter'] = null;
   }
   persist();
@@ -1872,27 +1896,42 @@ function removeMedia(kind, type, idx){
 function viewMedia(kind, type, idx){
   if (!state.currentClient) return;
   const vs = getVisitState(state.currentClient.slotKey, state.currentClient.ref);
-  // Collect all photos into one gallery array
-  const allPhotos = [];
-  (vs.photosBefore || []).forEach((p, i) => { if (p.url) allPhotos.push({ url: p.url, label: 'ДО · фото ' + (i+1) }); });
-  if (vs.videoBefore?.url) allPhotos.push({ url: vs.videoBefore.url, label: 'ДО · видео', isVideo: true });
-  (vs.photosAfter || []).forEach((p, i) => { if (p.url) allPhotos.push({ url: p.url, label: 'ПОСЛЕ · фото ' + (i+1) }); });
-  if (vs.videoAfter?.url) allPhotos.push({ url: vs.videoAfter.url, label: 'ПОСЛЕ · видео', isVideo: true });
-
-  if (allPhotos.length === 0) { toast('Фото ещё не загружены'); return; }
-
-  // Calculate start index
-  let startIdx = 0;
-  if (kind === 'before' && type === 'photo') startIdx = idx;
-  else if (kind === 'before' && type === 'video') startIdx = (vs.photosBefore || []).filter(p => p.url).length;
-  else if (kind === 'after' && type === 'photo') {
-    startIdx = (vs.photosBefore || []).filter(p => p.url).length + (vs.videoBefore?.url ? 1 : 0) + idx;
-  } else if (kind === 'after' && type === 'video') {
-    startIdx = allPhotos.length - 1;
-  }
-
-  openGallery(allPhotos, startIdx);
+  const items = mediaItemsFor(vs);
+  if (items.length === 0) { toast('Фото ещё не загружены'); return; }
+  const pos = items.findIndex(x => x.kind === kind && x.type === type && x.idx === idx);
+  openGallery(items.map(({ url, label, isVideo }) => ({ url, label, isVideo })), pos >= 0 ? pos : 0);
 }
+
+function editCaption(kind, type, idx){
+  if (!state.currentClient) return;
+  const vs = getVisitState(state.currentClient.slotKey, state.currentClient.ref);
+  const K = kind === 'before' ? 'Before' : 'After';
+  const list = type === 'photo' ? (vs['photos' + K] || []) : videosOf(vs, kind);
+  const item = list[idx];
+  if (!item) return;
+  showModal(`<div class="modal-h">Комментарий</div>
+    <div class="modal-d">${kind === 'before' ? 'До работы' : 'После работы'} · ${type === 'photo' ? 'фото' : 'видео'} ${idx + 1}</div>
+    <textarea class="modal-input" id="caption-text" rows="3" placeholder="Что здесь видно, например: «Убрана листва с газона»">${esc(item.caption || '')}</textarea>
+    <div class="modal-actions"><button class="modal-btn secondary" onclick="closeModal()">Отмена</button><button class="modal-btn primary" onclick="saveCaption('${kind}','${type}',${idx})">Сохранить</button></div>`);
+}
+
+function saveCaption(kind, type, idx){
+  if (!state.currentClient) return;
+  const vs = getVisitState(state.currentClient.slotKey, state.currentClient.ref);
+  const K = kind === 'before' ? 'Before' : 'After';
+  const text = document.getElementById('caption-text').value.trim().slice(0, 300);
+  if (type === 'photo') {
+    const item = (vs['photos' + K] || [])[idx];
+    if (item) item.caption = text;
+  } else {
+    const list = videosOf(vs, kind);
+    if (list[idx]) { list[idx].caption = text; vs['videos' + K] = list; }
+  }
+  persist(); closeModal();
+  renderDetail(state.currentClient.slotKey, state.currentClient.ref, vs);
+}
+
+function openGalleryEncoded(encoded, i){ openGallery(JSON.parse(decodeURIComponent(encoded)), i); }
 
 // Also for dispatcher photo viewing
 function openDispGallery(photos) {
@@ -3186,7 +3225,8 @@ async function loadClientHistory(clientName, limit) {
   const entries = [];
   const norm = (v) => ({ clientName: v.clientName, slotKey: v.slotKey, date: v.date || '', week: v.week, status: v.status, m2: v.m2 || 0,
     tasksTotal: v.tasksTotal || (v.tasksDone || []).length, doneTasks: Array.isArray(v.tasksDone) ? v.tasksDone.map((d, i) => (d ? (STD_TASKS[i] || '') : null)).filter(Boolean) : [], tasksDone: Array.isArray(v.tasksDone) ? v.tasksDone.filter(Boolean).length : (v.tasksDone || 0),
-    photosBefore: (v.photosBefore || []).map(p => p.url || p).filter(Boolean), photosAfter: (v.photosAfter || []).map(p => p.url || p).filter(Boolean),
+    photosBefore: (v.photosBefore || []).map(p => ({ url: p.url || p, caption: p.caption || '' })).filter(p => p.url), photosAfter: (v.photosAfter || []).map(p => ({ url: p.url || p, caption: p.caption || '' })).filter(p => p.url),
+    videosBefore: videosOf(v, 'before').map(x => ({ url: x.url, caption: x.caption || '' })).filter(x => x.url), videosAfter: videosOf(v, 'after').map(x => ({ url: x.url, caption: x.caption || '' })).filter(x => x.url),
     rating: v.rating || null, ratingText: v.ratingText || '', note: v.note || '', elapsed: v.elapsed || 0, skipReason: v.skipReasonLabel || v.skipReason || '', skipComment: v.skipComment || '', ts: v.updatedAt || v.ts });
   try {
     const snap = await db.collection(VISITS_COL).where('clientName', '==', clientName).limit(500).get();
@@ -3203,7 +3243,14 @@ async function loadClientHistory(clientName, limit) {
 function renderHistoryEntries(entries, forClient) {
   if (entries.length === 0) return '<div style="text-align:center;padding:20px;color:var(--moss);font-size:12px;">Пока нет записей в истории. Они появятся после завершения визитов.</div>';
   return entries.map(h => {
-    const allPhotos = [...(h.photosBefore||[]).map(u=>({url:u,label:'ДО'})), ...(h.photosAfter||[]).map(u=>({url:u,label:'ПОСЛЕ'}))];
+    const cap = c => (c ? ' — ' + esc(c) : '');
+    const allPhotos = [
+      ...(h.photosBefore||[]).map(p => ({ url: p.url, label: 'ДО' + cap(p.caption), isVideo: false })),
+      ...(h.videosBefore||[]).map(v => ({ url: v.url, label: 'ДО · видео' + cap(v.caption), isVideo: true })),
+      ...(h.photosAfter||[]).map(p => ({ url: p.url, label: 'ПОСЛЕ' + cap(p.caption), isVideo: false })),
+      ...(h.videosAfter||[]).map(v => ({ url: v.url, label: 'ПОСЛЕ · видео' + cap(v.caption), isVideo: true })),
+    ];
+    const galleryArg = encodeURIComponent(JSON.stringify(allPhotos));
     const statusLabel = h.status === 'done' ? '✅ Выполнено' : '🔴 ' + (h.skipReason || 'Пропущен');
     return `
       <div style="background:var(--cream);border-radius:12px;padding:12px;margin-bottom:8px;">
@@ -3218,7 +3265,7 @@ function renderHistoryEntries(entries, forClient) {
         ${h.status === 'skip' && h.skipComment && !forClient ? `<div style="font-size:11px;color:var(--rust);margin-top:4px;">${esc(h.skipComment)}</div>` : ''}
         ${h.note && !forClient ? `<div style="font-size:11px;color:var(--forest-deep);margin-top:4px;font-style:italic;">📝 ${esc(h.note)}</div>` : ''}
         ${allPhotos.length > 0 ? `<div style="display:flex;gap:5px;margin-top:8px;overflow-x:auto;">
-          ${allPhotos.map((p,i) => `<img src="${p.url}" style="width:70px;height:52px;object-fit:cover;border-radius:6px;flex-shrink:0;cursor:pointer;" onclick="openGallery(${JSON.stringify(allPhotos).replace(/"/g,'&quot;')}, ${i})" />`).join('')}
+          ${allPhotos.map((p,i) => p.isVideo ? `<div onclick="openGalleryEncoded('${galleryArg}', ${i})" style="width:70px;height:52px;border-radius:6px;flex-shrink:0;cursor:pointer;background:#1a3829;color:var(--bone);display:flex;align-items:center;justify-content:center;font-size:18px;">▶</div>` : `<img src="${p.url}" style="width:70px;height:52px;object-fit:cover;border-radius:6px;flex-shrink:0;cursor:pointer;" onclick="openGalleryEncoded('${galleryArg}', ${i})" />`).join('')}
         </div>` : ''}
         ${h.rating ? `<div style="margin-top:6px;font-size:14px;">${[1,2,3,4,5].map(i=>`<span style="color:${h.rating>=i?'var(--amber)':'rgba(0,0,0,0.1)'};">★</span>`).join('')}</div>` : ''}
       </div>`;
